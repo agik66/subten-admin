@@ -35,7 +35,7 @@ a{color:var(--orange)}
 .login-error{color:var(--red);font-size:13px;margin-bottom:12px;display:none}
 
 /* DASHBOARD */
-#dashboard{display:none;padding:20px;max-width:1400px;margin:0 auto}
+#dashboard{display:none;padding:24px 32px;margin:0 auto}
 
 /* HEADER */
 .header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px}
@@ -59,7 +59,7 @@ a{color:var(--orange)}
 .user-filter select:focus{border-color:var(--orange)}
 
 /* KPI CARDS */
-.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin-bottom:20px}
+.kpi-row{display:grid;grid-template-columns:repeat(6,1fr);gap:14px;margin-bottom:20px}
 .kpi{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;position:relative;overflow:hidden}
 .kpi::before{content:'';position:absolute;top:0;left:0;width:4px;height:100%;border-radius:4px 0 0 4px}
 .kpi.orange::before{background:var(--orange)}.kpi.red::before{background:var(--red)}
@@ -81,10 +81,22 @@ a{color:var(--orange)}
 .unavailable{color:var(--text2);font-size:14px;font-style:italic;padding:10px 0}
 
 /* CHARTS */
-.charts-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:14px;margin-bottom:20px}
-.chart-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px}
-.chart-card h3{font-size:14px;margin-bottom:14px;color:var(--text2)}
-.chart-card canvas{width:100%!important;max-height:280px}
+.charts-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-bottom:20px}
+.chart-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;position:relative;cursor:pointer;transition:border-color .2s}
+.chart-card:hover{border-color:var(--orange)}
+.chart-card h3{font-size:14px;margin-bottom:14px;color:var(--text2);display:flex;justify-content:space-between;align-items:center}
+.chart-card h3::after{content:'⛶';font-size:14px;opacity:.3;transition:opacity .2s}
+.chart-card:hover h3::after{opacity:.8}
+.chart-card canvas{width:100%!important;max-height:320px}
+
+/* CHART MODAL */
+.chart-modal-overlay{display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,.85);z-index:9999;align-items:center;justify-content:center;padding:40px}
+.chart-modal-overlay.active{display:flex}
+.chart-modal{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:32px;width:100%;max-width:1200px;max-height:90vh;position:relative}
+.chart-modal h3{font-size:18px;margin-bottom:20px;color:var(--text)}
+.chart-modal canvas{width:100%!important;max-height:70vh}
+.chart-modal-close{position:absolute;top:16px;right:20px;background:none;border:none;color:var(--text2);font-size:24px;cursor:pointer;padding:4px 8px;border-radius:6px;transition:all .2s}
+.chart-modal-close:hover{color:var(--text);background:#1a1a28}
 
 /* ENGAGEMENT */
 .engage-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:20px}
@@ -135,6 +147,13 @@ tr:hover td{background:#1a1a28}
 .user-detail-item .lbl{font-size:12px;color:var(--text2);margin-top:4px}
 
 /* RESPONSIVE */
+@media(max-width:1200px){
+  .kpi-row{grid-template-columns:repeat(3,1fr)}
+}
+@media(max-width:900px){
+  .charts-grid{grid-template-columns:1fr}
+  .kpi-row{grid-template-columns:repeat(2,1fr)}
+}
 @media(max-width:600px){
   .header{flex-direction:column;align-items:flex-start}
   .kpi-row{grid-template-columns:repeat(2,1fr)}
@@ -142,6 +161,9 @@ tr:hover td{background:#1a1a28}
   .filter-bar{flex-direction:column}
   .period-bar{gap:4px;padding:6px}
   .period-btn{padding:6px 12px;font-size:12px}
+  #dashboard{padding:16px}
+  .chart-modal{padding:20px}
+  .chart-modal-overlay{padding:16px}
 }
 </style>
 </head>
@@ -218,10 +240,14 @@ tr:hover td{background:#1a1a28}
     </div>
 
     <!-- PREDICTION -->
-    <div class="chart-card" style="margin-bottom:20px"><h3>Predikcia n&#225;kladov (30 dn&#237;)</h3><canvas id="chart-predict"></canvas></div>
+    <div class="charts-grid" style="grid-template-columns:1fr">
+      <div class="chart-card"><h3>Predikcia n&#225;kladov (30 dn&#237;)</h3><canvas id="chart-predict"></canvas></div>
+    </div>
 
     <!-- PARETO -->
-    <div class="chart-card" style="margin-bottom:20px"><h3>Pareto - Top API spotrebitelia</h3><canvas id="chart-pareto"></canvas></div>
+    <div class="charts-grid" style="grid-template-columns:1fr">
+      <div class="chart-card"><h3>Pareto - Top API spotrebitelia</h3><canvas id="chart-pareto"></canvas></div>
+    </div>
 
     <!-- ENGAGEMENT -->
     <div class="section-title">Aktivita pou&#382;&#237;vate&#318;ov</div>
@@ -244,6 +270,15 @@ tr:hover td{background:#1a1a28}
     <div class="section-title">Cenn&#237;k modelov</div>
     <div class="table-card"><table id="tbl-pricing"><thead><tr><th>Model</th><th>Prompt / 1M</th><th>Completion / 1M</th></tr></thead><tbody></tbody></table></div>
 
+  </div>
+</div>
+
+<!-- CHART MODAL -->
+<div class="chart-modal-overlay" id="chart-modal-overlay" onclick="closeChartModal(event)">
+  <div class="chart-modal" id="chart-modal">
+    <button class="chart-modal-close" onclick="closeChartModal()">&times;</button>
+    <h3 id="chart-modal-title"></h3>
+    <canvas id="chart-modal-canvas"></canvas>
   </div>
 </div>
 
@@ -364,12 +399,15 @@ function onUserFilterChange(){
 
 function filterByUser(data){
   if(currentUserId==='all')return data;
+  // Filter usage data for selected user
   const filtered=JSON.parse(JSON.stringify(data));
+  // Filter byUser to only selected
   if(filtered.byUser){
     const userUsage=filtered.byUser[currentUserId];
     filtered.byUser={};
     if(userUsage)filtered.byUser[currentUserId]=userUsage;
   }
+  // Recalculate totals from user's usage
   const userUsage=data.byUser?data.byUser[currentUserId]:null;
   if(userUsage){
     filtered.totals={
@@ -382,6 +420,7 @@ function filterByUser(data){
   }else{
     filtered.totals={requests:0,promptTokens:0,completionTokens:0,totalTokens:0,cost:0};
   }
+  // Filter users list
   filtered.users=(data.users||[]).filter(u=>(u.fullId||u.id)===currentUserId);
   return filtered;
 }
@@ -404,8 +443,10 @@ function renderDashboard(rawData){
   const totalUsers=(rawData.users||[]).length;
   const isFiltered=currentUserId!=='all';
 
+  // USER DETAIL PANEL
   renderUserDetail(rawData.users||[]);
 
+  // LAST UPDATED
   document.getElementById('last-updated').textContent='Aktualizované: '+fDate(rawData.generatedAt);
 
   // KPI
@@ -419,11 +460,22 @@ function renderDashboard(rawData){
     '<div class="kpi blue"><div class="kpi-label">Používatelia</div><div class="kpi-value">'+totalUsers+'</div><div class="kpi-sub">premium: '+(s.premium||0)+' · none: '+(s.none||totalUsers-(s.premium||0))+'</div></div>'+
     '<div class="kpi purple"><div class="kpi-label">Avg / request</div><div class="kpi-value">'+fU(avgReq)+'</div><div class="kpi-sub">priemerné náklady</div></div>';
 
+  // CREDITS (always show global)
   renderCredits(rawData.openRouterBalance,rawData.openRouterTrialBalance);
+
+  // CHARTS
   renderCharts(d,rawData);
+
+  // PREDICTION (always global)
   renderPrediction(rawData.daily||[]);
+
+  // PARETO (always global)
   renderPareto(rawData.users||[]);
+
+  // ENGAGEMENT
   renderEngagement(rawData.usageStatsSummary||{});
+
+  // TABLES
   renderTable('tbl-models',d.byModel||rawData.byModel||{},['requests','prompt','completion','cost'],shortModel);
   renderTable('tbl-tasks',d.byTask||rawData.byTask||{},['requests','prompt','completion','cost']);
   renderUsers(isFiltered?d.users:rawData.users||[]);
@@ -477,6 +529,7 @@ function renderCharts(d,rawData){
   var costs=daily.map(function(x){return x.cost});
   var reqs=daily.map(function(x){return x.requests});
 
+  // Daily cost line
   destroyChart('daily-cost');
   charts['daily-cost']=new Chart(document.getElementById('chart-daily-cost'),{
     type:'line',
@@ -484,6 +537,7 @@ function renderCharts(d,rawData){
     options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#9393a0',font:{size:11}},grid:{color:'#1e1e2e'}},y:{ticks:{color:'#9393a0',callback:function(v){return'$'+v.toFixed(3)}},grid:{color:'#1e1e2e'}}}}
   });
 
+  // Daily requests bar
   destroyChart('daily-req');
   charts['daily-req']=new Chart(document.getElementById('chart-daily-req'),{
     type:'bar',
@@ -491,6 +545,7 @@ function renderCharts(d,rawData){
     options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#9393a0',font:{size:11}},grid:{color:'#1e1e2e'}},y:{ticks:{color:'#9393a0'},grid:{color:'#1e1e2e'}}}}
   });
 
+  // Model doughnut
   var models=Object.entries(rawData.byModel||{});
   destroyChart('model');
   charts['model']=new Chart(document.getElementById('chart-model'),{
@@ -499,6 +554,7 @@ function renderCharts(d,rawData){
     options:{responsive:true,plugins:{legend:{position:'bottom',labels:{color:'#e4e4e7',font:{size:11},padding:8}}}}
   });
 
+  // Task horizontal bar
   var tasks=Object.entries(rawData.byTask||{}).sort(function(a,b){return(b[1].requests||0)-(a[1].requests||0)});
   destroyChart('task');
   charts['task']=new Chart(document.getElementById('chart-task'),{
@@ -641,6 +697,7 @@ function renderLocaleMap(dist){
       radius:radius,fillColor:'#f97316',color:'#f97316',weight:2,opacity:0.8,fillOpacity:0.35
     }).addTo(localeMap);
     circle.bindPopup('<div class="locale-popup"><div class="code">'+code.toUpperCase()+'</div><div class="count">'+loc.name+'</div><div class="count"><b>'+count+'</b> používateľov</div></div>');
+    // Add label
     L.marker([loc.lat,loc.lng],{
       icon:L.divIcon({className:'',html:'<div style="color:#f97316;font-weight:700;font-size:12px;text-align:center;text-shadow:0 0 4px #000">'+code.toUpperCase()+'<br><span style="color:#e4e4e7;font-size:11px">'+count+'</span></div>',iconSize:[40,30],iconAnchor:[20,15]})
     }).addTo(localeMap);
@@ -658,6 +715,48 @@ function renderPricing(pricing){
   var tbody=document.querySelector('#tbl-pricing tbody');
   tbody.innerHTML=Object.entries(pricing).map(function(e){return'<tr><td>'+shortModel(e[0])+'</td><td>$'+e[1].prompt+'</td><td>$'+e[1].completion+'</td></tr>'}).join('');
 }
+
+// --- CHART EXPAND ---
+var modalChart=null;
+function openChartModal(sourceCanvas,title){
+  var overlay=document.getElementById('chart-modal-overlay');
+  var modalCanvas=document.getElementById('chart-modal-canvas');
+  document.getElementById('chart-modal-title').textContent=title;
+  overlay.classList.add('active');
+  document.body.style.overflow='hidden';
+  // Find source chart instance
+  var srcChart=Chart.getChart(sourceCanvas);
+  if(!srcChart)return;
+  // Clone config
+  var cfg=JSON.parse(JSON.stringify(srcChart.config));
+  // Copy dataset data (not serializable refs)
+  cfg.data.datasets.forEach(function(ds,i){
+    ds.data=srcChart.config.data.datasets[i].data.slice();
+  });
+  cfg.options=JSON.parse(JSON.stringify(srcChart.options));
+  // Remove max-height for modal
+  if(modalChart){modalChart.destroy();modalChart=null;}
+  modalChart=new Chart(modalCanvas,cfg);
+}
+
+function closeChartModal(e){
+  if(e&&e.target!==document.getElementById('chart-modal-overlay')&&!e.target.classList.contains('chart-modal-close'))return;
+  document.getElementById('chart-modal-overlay').classList.remove('active');
+  document.body.style.overflow='';
+  if(modalChart){modalChart.destroy();modalChart=null;}
+}
+
+document.addEventListener('keydown',function(e){if(e.key==='Escape')closeChartModal()});
+
+// Attach click handlers to chart cards
+document.addEventListener('click',function(e){
+  var card=e.target.closest('.chart-card');
+  if(!card)return;
+  if(card.closest('.chart-modal'))return;
+  var canvas=card.querySelector('canvas');
+  var title=card.querySelector('h3');
+  if(canvas&&title)openChartModal(canvas,title.textContent.replace('⛶','').trim());
+});
 
 // --- INIT ---
 checkAuth();
