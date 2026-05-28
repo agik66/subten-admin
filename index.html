@@ -7,7 +7,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.css"/>
-<script src="https://cdn.jsdelivr.net/npm/eaflet@1.9.4/dist/leaflet.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.94/dist/leaflet.min.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{
@@ -692,7 +692,7 @@ function cloneDeep(obj){
   if(obj===null||obj===undefined)return obj;
   if(typeof obj==='function')return obj;
   if(Array.isArray(obj))return obj.map(cloneDeep);
-  if(typeof obj==='object'){var c={};for(var k in obj){if(obj.hasOwnProperty(k))c[k]=cloneDeep(obj[k])}return c}
+  if(typeof obj==='object'){var c={};for(var k in obj){if(Object.prototype.hasOwnProperty.call(obj,k))c[k]=cloneDeep(obj[k])}return c}
   return obj;
 }
 function openChartModal(sourceCanvas,title){
