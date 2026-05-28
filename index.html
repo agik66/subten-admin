@@ -499,7 +499,7 @@ function renderCredits(premium,trial){
     '</div>';
   };
   document.getElementById('credit-row').innerHTML=card('Premium kredit',premium,'var(--green)')+card('Trial kredit',trial,'var(--blue)');
-
+}
 
 // --- CHARTS ---
 function destroyChart(id){if(charts[id]){charts[id].destroy();delete charts[id]}}
@@ -570,7 +570,7 @@ function renderPrediction(daily){
     ]},options:{responsive:true,plugins:{legend:{labels:{color:'#e4e4e7'}},subtitle:{display:true,text:'Predpokladan\u00e9 mesa\u010dn\u00e9 n\u00e1klady: '+fU(predictedMonthly),color:'#9393a0',font:{size:12}}},scales:{x:{ticks:{color:'#9393a0',font:{size:11}},grid:{color:'#1e1e2e'}},y:{ticks:{color:'#9393a0',callback:function(v){return'$'+v.toFixed(3)}},grid:{color:'#1e1e2e'}}}}};
   charts['predict']=new Chart(document.getElementById('chart-predict'),predictCfg);
   chartConfigs['chart-predict']=predictCfg;
-}}
+}
 
 // --- PARETO ---
 function renderPareto(users){
