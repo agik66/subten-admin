@@ -6,6 +6,8 @@
 <title>Subten Admin Dashboard</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.css"/>
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{
@@ -45,11 +47,16 @@ a{color:var(--orange)}
 .btn-sm.primary{background:var(--orange);color:#fff;border-color:var(--orange)}
 .btn-sm.primary:hover{opacity:.85}
 
-/* PERIOD FILTER */
-.period-bar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:24px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:8px}
+/* FILTER BAR */
+.filter-bar{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:24px}
+.period-bar{display:flex;gap:6px;flex-wrap:wrap;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:8px}
 .period-btn{padding:8px 18px;border-radius:10px;border:none;background:transparent;color:var(--text2);font-size:13px;font-weight:600;cursor:pointer;transition:all .2s}
 .period-btn:hover{color:var(--text);background:#1a1a28}
 .period-btn.active{background:var(--orange);color:#fff}
+.user-filter{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:8px 12px;display:flex;align-items:center;gap:8px}
+.user-filter label{font-size:12px;color:var(--text2);white-space:nowrap}
+.user-filter select{background:#1a1a28;border:1px solid var(--border);border-radius:8px;color:var(--text);padding:6px 12px;font-size:13px;font-weight:600;outline:none;cursor:pointer;min-width:160px}
+.user-filter select:focus{border-color:var(--orange)}
 
 /* KPI CARDS */
 .kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin-bottom:20px}
@@ -96,9 +103,20 @@ tr:hover td{background:#1a1a28}
 .badge-trial{background:#f9731620;color:var(--orange)}
 .badge-premium{background:#22c55e20;color:var(--green)}
 .badge-byok{background:#3b82f620;color:var(--blue)}
+.badge-none{background:#9393a020;color:var(--text2)}
 .locale-chips{display:flex;gap:8px;flex-wrap:wrap}
 .locale-chip{background:#1a1a28;border:1px solid var(--border);border-radius:8px;padding:6px 14px;font-size:13px}
 .locale-chip strong{color:var(--orange)}
+
+/* MAP */
+.map-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:20px}
+.map-card h3{font-size:14px;margin-bottom:14px;color:var(--text2)}
+#locale-map{height:340px;border-radius:10px;background:#0d0d14}
+.leaflet-container{background:#0d0d14!important}
+.leaflet-tile-pane{filter:saturate(0.3) brightness(0.4)}
+.locale-popup{text-align:center;font-family:inherit}
+.locale-popup .code{font-size:18px;font-weight:700;color:#f97316}
+.locale-popup .count{font-size:13px;color:#666}
 
 /* SECTION TITLES */
 .section-title{font-size:16px;font-weight:700;margin:28px 0 14px;padding-bottom:8px;border-bottom:1px solid var(--border)}
@@ -108,11 +126,20 @@ tr:hover td{background:#1a1a28}
 .spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--orange);border-radius:50%;animation:spin .7s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 
+/* USER DETAIL PANEL */
+.user-detail{background:var(--card);border:1px solid var(--orange);border-radius:var(--radius);padding:20px;margin-bottom:20px}
+.user-detail h3{font-size:16px;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.user-detail-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px}
+.user-detail-item{text-align:center}
+.user-detail-item .val{font-size:22px;font-weight:700}
+.user-detail-item .lbl{font-size:12px;color:var(--text2);margin-top:4px}
+
 /* RESPONSIVE */
 @media(max-width:600px){
   .header{flex-direction:column;align-items:flex-start}
   .kpi-row{grid-template-columns:repeat(2,1fr)}
   .charts-grid{grid-template-columns:1fr}
+  .filter-bar{flex-direction:column}
   .period-bar{gap:4px;padding:6px}
   .period-btn{padding:6px 12px;font-size:12px}
 }
@@ -124,16 +151,16 @@ tr:hover td{background:#1a1a28}
 <div id="login-screen">
   <div class="login-box">
     <h1>Subten Admin</h1>
-    <p>PrihlÃ¡ste sa pre prÃ­stup k dashboardu</p>
+    <p>Prihl&#225;ste sa pre pr&#237;stup k dashboardu</p>
     <button class="btn btn-google" onclick="loginGoogle()">
       <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
-      PrihlasiÅ¥ sa cez Google
+      Prihl&#225;si&#357; sa cez Google
     </button>
     <div class="divider">alebo</div>
     <div class="login-error" id="login-error"></div>
     <input type="email" id="login-email" placeholder="Email">
     <input type="password" id="login-password" placeholder="Heslo">
-    <button class="btn btn-email" onclick="loginEmail()">PrihlasiÅ¥ sa emailom</button>
+    <button class="btn btn-email" onclick="loginEmail()">Prihl&#225;si&#357; sa emailom</button>
   </div>
 </div>
 
@@ -141,7 +168,7 @@ tr:hover td{background:#1a1a28}
 <div id="dashboard">
   <div class="loading" id="loading">
     <div class="spinner"></div>
-    <span style="color:var(--text2);font-size:14px">NaÄÃ­tavam dÃ¡ta...</span>
+    <span style="color:var(--text2);font-size:14px">Na&#269;&#237;tavam d&#225;ta...</span>
   </div>
   <div id="dash-content" style="display:none">
 
@@ -150,20 +177,31 @@ tr:hover td{background:#1a1a28}
       <h1>Subten Admin Dashboard</h1>
       <div class="header-right">
         <span class="ts" id="last-updated"></span>
-        <button class="btn-sm primary" onclick="refresh()">ObnoviÅ¥</button>
-        <button class="btn-sm" onclick="logout()">OdhlÃ¡siÅ¥</button>
+        <button class="btn-sm primary" onclick="refresh()">Obnovi&#357;</button>
+        <button class="btn-sm" onclick="logout()">Odhl&#225;si&#357;</button>
       </div>
     </div>
 
-    <!-- PERIOD FILTER -->
-    <div class="period-bar" id="period-bar">
-      <button class="period-btn" data-days="0">Dnes</button>
-      <button class="period-btn" data-days="7">7 dnÃ­</button>
-      <button class="period-btn" data-days="30">30 dnÃ­</button>
-      <button class="period-btn" data-days="90">90 dnÃ­</button>
-      <button class="period-btn" data-days="365">Rok</button>
-      <button class="period-btn active" data-days="all">VÅ¡etko</button>
+    <!-- FILTER BAR -->
+    <div class="filter-bar">
+      <div class="period-bar" id="period-bar">
+        <button class="period-btn" data-days="0">Dnes</button>
+        <button class="period-btn" data-days="7">7 dn&#237;</button>
+        <button class="period-btn" data-days="30">30 dn&#237;</button>
+        <button class="period-btn" data-days="90">90 dn&#237;</button>
+        <button class="period-btn" data-days="365">Rok</button>
+        <button class="period-btn active" data-days="all">V&#353;etko</button>
+      </div>
+      <div class="user-filter">
+        <label>Pou&#382;&#237;vate&#318;:</label>
+        <select id="user-select" onchange="onUserFilterChange()">
+          <option value="all">V&#353;etci pou&#382;&#237;vatelia</option>
+        </select>
+      </div>
     </div>
+
+    <!-- USER DETAIL (hidden by default) -->
+    <div class="user-detail" id="user-detail" style="display:none"></div>
 
     <!-- KPI -->
     <div class="kpi-row" id="kpi-row"></div>
@@ -173,36 +211,37 @@ tr:hover td{background:#1a1a28}
 
     <!-- CHARTS 2x2 -->
     <div class="charts-grid">
-      <div class="chart-card"><h3>DennÃ½ trend - NÃ¡klady (USD)</h3><canvas id="chart-daily-cost"></canvas></div>
-      <div class="chart-card"><h3>DennÃ½ trend - Requesty</h3><canvas id="chart-daily-req"></canvas></div>
-      <div class="chart-card"><h3>NÃ¡klady podÄ¾a modelu</h3><canvas id="chart-model"></canvas></div>
-      <div class="chart-card"><h3>Requesty podÄ¾a tasku</h3><canvas id="chart-task"></canvas></div>
+      <div class="chart-card"><h3>Denn&#253; trend - N&#225;klady (USD)</h3><canvas id="chart-daily-cost"></canvas></div>
+      <div class="chart-card"><h3>Denn&#253; trend - Requesty</h3><canvas id="chart-daily-req"></canvas></div>
+      <div class="chart-card"><h3>N&#225;klady pod&#318;a modelu</h3><canvas id="chart-model"></canvas></div>
+      <div class="chart-card"><h3>Requesty pod&#318;a tasku</h3><canvas id="chart-task"></canvas></div>
     </div>
 
     <!-- PREDICTION -->
-    <div class="chart-card" style="margin-bottom:20px"><h3>Predikcia nÃ¡kladov (30 dnÃ­)</h3><canvas id="chart-predict"></canvas></div>
+    <div class="chart-card" style="margin-bottom:20px"><h3>Predikcia n&#225;kladov (30 dn&#237;)</h3><canvas id="chart-predict"></canvas></div>
 
     <!-- PARETO -->
     <div class="chart-card" style="margin-bottom:20px"><h3>Pareto - Top API spotrebitelia</h3><canvas id="chart-pareto"></canvas></div>
 
     <!-- ENGAGEMENT -->
-    <div class="section-title">Aktivita pouÅ¾Ã­vateÄ¾ov</div>
+    <div class="section-title">Aktivita pou&#382;&#237;vate&#318;ov</div>
     <div class="engage-row" id="engage-row"></div>
 
     <!-- TABLES -->
     <div class="section-title">Modely</div>
-    <div class="table-card"><table id="tbl-models"><thead><tr><th>Model</th><th>Requesty</th><th>Prompt</th><th>Completion</th><th>NÃ¡klady</th></tr></thead><tbody></tbody></table></div>
+    <div class="table-card"><table id="tbl-models"><thead><tr><th>Model</th><th>Requesty</th><th>Prompt</th><th>Completion</th><th>N&#225;klady</th></tr></thead><tbody></tbody></table></div>
 
     <div class="section-title">Tasky</div>
-    <div class="table-card"><table id="tbl-tasks"><thead><tr><th>Task</th><th>Requesty</th><th>Prompt</th><th>Completion</th><th>NÃ¡klady</th></tr></thead><tbody></tbody></table></div>
+    <div class="table-card"><table id="tbl-tasks"><thead><tr><th>Task</th><th>Requesty</th><th>Prompt</th><th>Completion</th><th>N&#225;klady</th></tr></thead><tbody></tbody></table></div>
 
-    <div class="section-title">PouÅ¾Ã­vatelia</div>
-    <div class="table-card"><table id="tbl-users"><thead><tr><th>Meno/ID</th><th>Zariadenie</th><th>OS</th><th>App</th><th>LokalizÃ¡cia</th><th>PlÃ¡n</th><th>Requesty</th><th>NÃ¡klady</th><th>PoslednÃ¡ aktivita</th></tr></thead><tbody></tbody></table></div>
+    <div class="section-title">Pou&#382;&#237;vatelia</div>
+    <div class="table-card"><table id="tbl-users"><thead><tr><th>Meno/ID</th><th>Zariadenie</th><th>OS</th><th>App</th><th>Lokaliz&#225;cia</th><th>Pl&#225;n</th><th>Requesty</th><th>N&#225;klady</th><th>Posledn&#225; aktivita</th></tr></thead><tbody></tbody></table></div>
 
-    <div class="section-title">LokalizÃ¡cia</div>
+    <div class="section-title">Lokaliz&#225;cia</div>
+    <div class="map-card"><h3>Mapa pou&#382;&#237;vate&#318;ov pod&#318;a lok&#225;lu</h3><div id="locale-map"></div></div>
     <div class="table-card"><div class="locale-chips" id="locale-chips"></div></div>
 
-    <div class="section-title">CennÃ­k modelov</div>
+    <div class="section-title">Cenn&#237;k modelov</div>
     <div class="table-card"><table id="tbl-pricing"><thead><tr><th>Model</th><th>Prompt / 1M</th><th>Completion / 1M</th></tr></thead><tbody></tbody></table></div>
 
   </div>
@@ -216,11 +255,13 @@ const REDIRECT_URL=window.location.origin+window.location.pathname;
 const sb=supabase.createClient(SB_URL,SB_KEY);
 let charts={};
 let currentPeriod='all';
+let currentUserId='all';
+let lastData=null;
 
 // --- FORMATTERS ---
 const fmt=n=>{if(n==null)return'0';if(n>=1e6)return(n/1e6).toFixed(1)+'M';if(n>=1e3)return(n/1e3).toFixed(1)+'k';return Number(n).toLocaleString('sk-SK')};
 const fU=n=>n==null?'$0.00':'$'+Number(n).toFixed(4);
-const fE=n=>n==null?'0.00 â¬':Number(n).toFixed(2)+' â¬';
+const fE=n=>n==null?'0.00 €':Number(n).toFixed(2)+' €';
 const fPct=n=>Number(n).toFixed(1)+'%';
 const shortModel=m=>{const p=m.split('/');return p.length>1?p[1]:m};
 const shortId=id=>(id||'').substring(0,8);
@@ -228,7 +269,6 @@ const fDate=d=>{if(!d)return'-';const dt=new Date(d);return dt.toLocaleDateStrin
 
 // --- AUTH ---
 async function checkAuth(){
-  // handle OAuth hash redirect
   if(window.location.hash&&window.location.hash.includes('access_token')){
     const params=new URLSearchParams(window.location.hash.substring(1));
     const access_token=params.get('access_token');
@@ -257,7 +297,7 @@ async function loginGoogle(){
 async function loginEmail(){
   const email=document.getElementById('login-email').value;
   const password=document.getElementById('login-password').value;
-  if(!email||!password)return showLoginError('VyplÅte email a heslo');
+  if(!email||!password)return showLoginError('Vyplňte email a heslo');
   const{error}=await sb.auth.signInWithPassword({email,password});
   if(error)return showLoginError(error.message);
   checkAuth();
@@ -289,16 +329,62 @@ async function loadData(){
     const res=await fetch(url,{headers:{'Authorization':'Bearer '+session.access_token,'apikey':SB_KEY}});
     if(!res.ok)throw new Error('HTTP '+res.status);
     const data=await res.json();
+    lastData=data;
     document.getElementById('loading').style.display='none';
     document.getElementById('dash-content').style.display='block';
+    populateUserFilter(data.users||[]);
     renderDashboard(data);
   }catch(e){
     console.error(e);
-    document.getElementById('loading').innerHTML='<span style="color:var(--red)">Chyba: '+e.message+'</span><button class="btn-sm primary" style="margin-top:12px" onclick="loadData()">SkÃºsiÅ¥ znova</button>';
+    document.getElementById('loading').innerHTML='<span style="color:var(--red)">Chyba: '+e.message+'</span><button class="btn-sm primary" style="margin-top:12px" onclick="loadData()">Skúsiť znova</button>';
   }
 }
 
 function refresh(){loadData()}
+
+// --- USER FILTER ---
+function populateUserFilter(users){
+  const sel=document.getElementById('user-select');
+  const prev=sel.value;
+  sel.innerHTML='<option value="all">Všetci používatelia</option>';
+  users.forEach(u=>{
+    const name=u.display_name||shortId(u.fullId||u.id);
+    const opt=document.createElement('option');
+    opt.value=u.fullId||u.id;
+    opt.textContent=name+' ('+shortId(u.fullId||u.id)+')';
+    sel.appendChild(opt);
+  });
+  if(prev&&sel.querySelector('option[value="'+prev+'"]'))sel.value=prev;
+}
+
+function onUserFilterChange(){
+  currentUserId=document.getElementById('user-select').value;
+  if(lastData)renderDashboard(lastData);
+}
+
+function filterByUser(data){
+  if(currentUserId==='all')return data;
+  const filtered=JSON.parse(JSON.stringify(data));
+  if(filtered.byUser){
+    const userUsage=filtered.byUser[currentUserId];
+    filtered.byUser={};
+    if(userUsage)filtered.byUser[currentUserId]=userUsage;
+  }
+  const userUsage=data.byUser?data.byUser[currentUserId]:null;
+  if(userUsage){
+    filtered.totals={
+      requests:userUsage.requests,
+      promptTokens:userUsage.promptTokens,
+      completionTokens:userUsage.completionTokens,
+      totalTokens:userUsage.promptTokens+userUsage.completionTokens,
+      cost:userUsage.cost
+    };
+  }else{
+    filtered.totals={requests:0,promptTokens:0,completionTokens:0,totalTokens:0,cost:0};
+  }
+  filtered.users=(data.users||[]).filter(u=>(u.fullId||u.id)===currentUserId);
+  return filtered;
+}
 
 // --- PERIOD FILTER ---
 document.getElementById('period-bar').addEventListener('click',e=>{
@@ -310,105 +396,114 @@ document.getElementById('period-bar').addEventListener('click',e=>{
 });
 
 // --- RENDER ---
-function renderDashboard(d){
+function renderDashboard(rawData){
+  const d=filterByUser(rawData);
   const t=d.totals||{};
-  const r=d.revenue||{};
-  const s=d.subscribers||{};
-  const totalUsers=(d.users||[]).length;
-  const avgReq=t.requests?((t.estimatedCostUSD||0)/t.requests):0;
+  const r=rawData.revenue||{};
+  const s=rawData.subscribers||{};
+  const totalUsers=(rawData.users||[]).length;
+  const isFiltered=currentUserId!=='all';
 
-  // LAST UPDATED
-  document.getElementById('last-updated').textContent='AktualizovanÃ©: '+fDate(d.generatedAt);
+  renderUserDetail(rawData.users||[]);
+
+  document.getElementById('last-updated').textContent='Aktualizované: '+fDate(rawData.generatedAt);
 
   // KPI
-  document.getElementById('kpi-row').innerHTML=`
-    <div class="kpi orange"><div class="kpi-label">CelkovÃ© requesty</div><div class="kpi-value">${fmt(t.requests)}</div><div class="kpi-sub">${fmt(t.promptTokens)} prompt + ${fmt(t.completionTokens)} completion tokenov</div></div>
-    <div class="kpi red"><div class="kpi-label">AI nÃ¡klady</div><div class="kpi-value">${fU(t.estimatedCostUSD)}</div><div class="kpi-sub">â ${fE(r.aiCostEUR)}</div></div>
-    <div class="kpi green"><div class="kpi-label">MesaÄnÃ½ prÃ­jem</div><div class="kpi-value">${fE(r.monthlyGrossEUR)}</div><div class="kpi-sub">po Apple: ${fE(r.netRevenueEUR)}</div></div>
-    <div class="kpi ${(r.profitEUR||0)>=0?'green':'red'}"><div class="kpi-label">Profit</div><div class="kpi-value">${fE(r.profitEUR)}</div><div class="kpi-sub">prÃ­jem - Apple cut - AI</div></div>
-    <div class="kpi blue"><div class="kpi-label">PouÅ¾Ã­vatelia</div><div class="kpi-value">${totalUsers}</div><div class="kpi-sub">trial: ${s.trial||0} Â· premium: ${s.premium||0} Â· BYOK: ${s.byok||0}</div></div>
-    <div class="kpi purple"><div class="kpi-label">Avg / request</div><div class="kpi-value">${fU(avgReq)}</div><div class="kpi-sub">priemernÃ© nÃ¡klady</div></div>
-  `;
+  const costVal=t.cost||0;
+  const avgReq=t.requests?(costVal/t.requests):0;
+  document.getElementById('kpi-row').innerHTML=
+    '<div class="kpi orange"><div class="kpi-label">Celkové requesty</div><div class="kpi-value">'+fmt(t.requests)+'</div><div class="kpi-sub">'+fmt(t.promptTokens)+' prompt + '+fmt(t.completionTokens)+' completion tokenov</div></div>'+
+    '<div class="kpi red"><div class="kpi-label">AI náklady</div><div class="kpi-value">'+fU(costVal)+'</div><div class="kpi-sub">'+(isFiltered?'filtrované podľa užívateľa':'≈ '+fE(costVal*0.92))+'</div></div>'+
+    '<div class="kpi green"><div class="kpi-label">Mesačný príjem</div><div class="kpi-value">'+fE(r.grossEur)+'</div><div class="kpi-sub">po Apple: '+fE(r.netEur)+'</div></div>'+
+    '<div class="kpi '+(((r.netEur||0)-costVal)>=0?'green':'red')+'"><div class="kpi-label">Profit</div><div class="kpi-value">'+fE((r.netEur||0)-costVal)+'</div><div class="kpi-sub">príjem - Apple cut - AI</div></div>'+
+    '<div class="kpi blue"><div class="kpi-label">Používatelia</div><div class="kpi-value">'+totalUsers+'</div><div class="kpi-sub">premium: '+(s.premium||0)+' · none: '+(s.none||totalUsers-(s.premium||0))+'</div></div>'+
+    '<div class="kpi purple"><div class="kpi-label">Avg / request</div><div class="kpi-value">'+fU(avgReq)+'</div><div class="kpi-sub">priemerné náklady</div></div>';
 
-  // CREDITS
-  renderCredits(d.openRouterBalance,d.openRouterTrialBalance);
+  renderCredits(rawData.openRouterBalance,rawData.openRouterTrialBalance);
+  renderCharts(d,rawData);
+  renderPrediction(rawData.daily||[]);
+  renderPareto(rawData.users||[]);
+  renderEngagement(rawData.usageStatsSummary||{});
+  renderTable('tbl-models',d.byModel||rawData.byModel||{},['requests','prompt','completion','cost'],shortModel);
+  renderTable('tbl-tasks',d.byTask||rawData.byTask||{},['requests','prompt','completion','cost']);
+  renderUsers(isFiltered?d.users:rawData.users||[]);
+  renderLocale(rawData.localeDistribution||{});
+  renderPricing(rawData.modelPricing||{});
+}
 
-  // CHARTS
-  renderCharts(d);
-
-  // PREDICTION
-  renderPrediction(d.daily||[]);
-
-  // PARETO
-  renderPareto(d.users||[]);
-
-  // ENGAGEMENT
-  renderEngagement(d.usageStatsSummary||{});
-
-  // TABLES
-  renderTable('tbl-models',d.byModel||{},['requests','prompt','completion','cost'],shortModel);
-  renderTable('tbl-tasks',d.byTask||{},['requests','prompt','completion','cost']);
-  renderUsers(d.users||[]);
-  renderLocale(d.localeDistribution||{});
-  renderPricing(d.modelPricing||{});
+// --- USER DETAIL ---
+function renderUserDetail(users){
+  const panel=document.getElementById('user-detail');
+  if(currentUserId==='all'){panel.style.display='none';return;}
+  const u=users.find(x=>(x.fullId||x.id)===currentUserId);
+  if(!u){panel.style.display='none';return;}
+  panel.style.display='block';
+  const name=u.display_name||shortId(u.fullId||u.id);
+  panel.innerHTML='<h3>👤 '+name+'</h3>'+
+    '<div class="user-detail-grid">'+
+    '<div class="user-detail-item"><div class="val">'+fmt(u.requests)+'</div><div class="lbl">Requesty</div></div>'+
+    '<div class="user-detail-item"><div class="val">'+fU(u.cost)+'</div><div class="lbl">Náklady</div></div>'+
+    '<div class="user-detail-item"><div class="val">'+(u.device_model||'-')+'</div><div class="lbl">Zariadenie</div></div>'+
+    '<div class="user-detail-item"><div class="val">'+(u.os_version||'-')+'</div><div class="lbl">OS</div></div>'+
+    '<div class="user-detail-item"><div class="val">'+(u.app_version||'-')+'</div><div class="lbl">App verzia</div></div>'+
+    '<div class="user-detail-item"><div class="val">'+(u.plan||'none')+'</div><div class="lbl">Plán</div></div>'+
+    '<div class="user-detail-item"><div class="val">'+fDate(u.last_seen_at)+'</div><div class="lbl">Posledná aktivita</div></div>'+
+    '<div class="user-detail-item"><div class="val">'+fDate(u.created_at)+'</div><div class="lbl">Registrácia</div></div>'+
+    '</div>';
 }
 
 // --- CREDITS ---
 function renderCredits(premium,trial){
-  const card=(label,data,color)=>{
-    if(!data)return`<div class="credit-card"><h3><span class="dot" style="background:${color}"></span>${label}</h3><div class="unavailable">NedostupnÃ©</div></div>`;
+  const card=function(label,data,color){
+    if(!data)return'<div class="credit-card"><h3><span class="dot" style="background:'+color+'"></span>'+label+'</h3><div class="unavailable">Nedostupné</div></div>';
     const pct=data.credits?((data.remaining/data.credits)*100):0;
     const barColor=pct>50?'var(--green)':pct>20?'var(--yellow)':'var(--red)';
-    return`<div class="credit-card"><h3><span class="dot" style="background:${barColor}"></span>${label}</h3>
-      <div class="credit-vals"><span>${fU(data.remaining)}</span><span>z ${fU(data.credits)}</span></div>
-      <div style="font-size:12px;color:var(--text2)">SpotrebovanÃ©: ${fU(data.usage)} (${fPct(100-pct)})</div>
-      <div class="progress-bar"><div class="fill" style="width:${pct}%;background:${barColor}"></div></div>
-    </div>`;
+    return'<div class="credit-card"><h3><span class="dot" style="background:'+barColor+'"></span>'+label+'</h3>'+
+      '<div class="credit-vals"><span>'+fU(data.remaining)+'</span><span>z '+fU(data.credits)+'</span></div>'+
+      '<div style="font-size:12px;color:var(--text2)">Spotrebované: '+fU(data.usage)+' ('+fPct(100-pct)+')</div>'+
+      '<div class="progress-bar"><div class="fill" style="width:'+pct+'%;background:'+barColor+'"></div></div>'+
+    '</div>';
   };
   document.getElementById('credit-row').innerHTML=card('Premium kredit',premium,'var(--green)')+card('Trial kredit',trial,'var(--blue)');
 }
 
 // --- CHARTS ---
 function destroyChart(id){if(charts[id]){charts[id].destroy();delete charts[id]}}
-const chartColors=['#f97316','#3b82f6','#22c55e','#a855f7','#ef4444','#eab308','#06b6d4','#ec4899','#14b8a6','#f43f5e'];
+var chartColors=['#f97316','#3b82f6','#22c55e','#a855f7','#ef4444','#eab308','#06b6d4','#ec4899','#14b8a6','#f43f5e'];
 
-function renderCharts(d){
-  const daily=d.daily||[];
-  const labels=daily.map(x=>x.date.slice(5));
-  const costs=daily.map(x=>x.cost);
-  const reqs=daily.map(x=>x.requests);
+function renderCharts(d,rawData){
+  var daily=rawData.daily||[];
+  var labels=daily.map(function(x){return x.date.slice(5)});
+  var costs=daily.map(function(x){return x.cost});
+  var reqs=daily.map(function(x){return x.requests});
 
-  // Daily cost line
   destroyChart('daily-cost');
   charts['daily-cost']=new Chart(document.getElementById('chart-daily-cost'),{
     type:'line',
-    data:{labels,datasets:[{label:'USD',data:costs,borderColor:'var(--orange)',backgroundColor:'rgba(249,115,22,.15)',fill:true,tension:.3,pointRadius:2}]},
-    options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#9393a0',font:{size:11}},grid:{color:'#1e1e2e'}},y:{ticks:{color:'#9393a0',callback:v=>'$'+v.toFixed(3)},grid:{color:'#1e1e2e'}}}}
+    data:{labels:labels,datasets:[{label:'USD',data:costs,borderColor:'#f97316',backgroundColor:'rgba(249,115,22,.15)',fill:true,tension:.3,pointRadius:2}]},
+    options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#9393a0',font:{size:11}},grid:{color:'#1e1e2e'}},y:{ticks:{color:'#9393a0',callback:function(v){return'$'+v.toFixed(3)}},grid:{color:'#1e1e2e'}}}}
   });
 
-  // Daily requests bar
   destroyChart('daily-req');
   charts['daily-req']=new Chart(document.getElementById('chart-daily-req'),{
     type:'bar',
-    data:{labels,datasets:[{label:'Requesty',data:reqs,backgroundColor:'rgba(59,130,246,.7)',borderRadius:4}]},
+    data:{labels:labels,datasets:[{label:'Requesty',data:reqs,backgroundColor:'rgba(59,130,246,.7)',borderRadius:4}]},
     options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#9393a0',font:{size:11}},grid:{color:'#1e1e2e'}},y:{ticks:{color:'#9393a0'},grid:{color:'#1e1e2e'}}}}
   });
 
-  // Model doughnut
-  const models=Object.entries(d.byModel||{});
+  var models=Object.entries(rawData.byModel||{});
   destroyChart('model');
   charts['model']=new Chart(document.getElementById('chart-model'),{
     type:'doughnut',
-    data:{labels:models.map(([k])=>shortModel(k)),datasets:[{data:models.map(([,v])=>v.cost||0),backgroundColor:chartColors.slice(0,models.length)}]},
+    data:{labels:models.map(function(e){return shortModel(e[0])}),datasets:[{data:models.map(function(e){return e[1].cost||0}),backgroundColor:chartColors.slice(0,models.length)}]},
     options:{responsive:true,plugins:{legend:{position:'bottom',labels:{color:'#e4e4e7',font:{size:11},padding:8}}}}
   });
 
-  // Task horizontal bar
-  const tasks=Object.entries(d.byTask||{}).sort((a,b)=>(b[1].requests||0)-(a[1].requests||0));
+  var tasks=Object.entries(rawData.byTask||{}).sort(function(a,b){return(b[1].requests||0)-(a[1].requests||0)});
   destroyChart('task');
   charts['task']=new Chart(document.getElementById('chart-task'),{
     type:'bar',
-    data:{labels:tasks.map(([k])=>k),datasets:[{label:'Requesty',data:tasks.map(([,v])=>v.requests),backgroundColor:'rgba(168,85,247,.7)',borderRadius:4}]},
+    data:{labels:tasks.map(function(e){return e[0]}),datasets:[{label:'Requesty',data:tasks.map(function(e){return e[1].requests}),backgroundColor:'rgba(168,85,247,.7)',borderRadius:4}]},
     options:{indexAxis:'y',responsive:true,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#9393a0'},grid:{color:'#1e1e2e'}},y:{ticks:{color:'#9393a0',font:{size:11}},grid:{color:'#1e1e2e'}}}}
   });
 }
@@ -417,37 +512,34 @@ function renderCharts(d){
 function renderPrediction(daily){
   destroyChart('predict');
   if(!daily.length)return;
-  const costs=daily.map(x=>x.cost);
-  const n=costs.length;
-  // linear regression
-  let sx=0,sy=0,sxx=0,sxy=0;
-  for(let i=0;i<n;i++){sx+=i;sy+=costs[i];sxx+=i*i;sxy+=i*costs[i]}
-  const slope=(n*sxy-sx*sy)/(n*sxx-sx*sx||1);
-  const intercept=(sy-slope*sx)/n;
-  const regLine=[];for(let i=0;i<n;i++)regLine.push(Math.max(0,slope*i+intercept));
+  var costs=daily.map(function(x){return x.cost});
+  var n=costs.length;
+  var sx=0,sy=0,sxx=0,sxy=0;
+  for(var i=0;i<n;i++){sx+=i;sy+=costs[i];sxx+=i*i;sxy+=i*costs[i]}
+  var slope=(n*sxy-sx*sy)/(n*sxx-sx*sx||1);
+  var intercept=(sy-slope*sx)/n;
+  var regLine=[];for(var i=0;i<n;i++)regLine.push(Math.max(0,slope*i+intercept));
 
-  // extend 7 days
-  const futureLabels=[];const futurePred=[];
-  const lastDate=new Date(daily[n-1].date);
-  for(let i=1;i<=7;i++){
-    const fd=new Date(lastDate);fd.setDate(fd.getDate()+i);
+  var futureLabels=[];var futurePred=[];
+  var lastDate=new Date(daily[n-1].date);
+  for(var i=1;i<=7;i++){
+    var fd=new Date(lastDate);fd.setDate(fd.getDate()+i);
     futureLabels.push(fd.toISOString().slice(5,10));
     futurePred.push(Math.max(0,slope*(n-1+i)+intercept));
   }
 
-  const allLabels=[...daily.map(x=>x.date.slice(5)),...futureLabels];
-  const actualData=[...costs,...Array(7).fill(null)];
-  const predData=[...regLine,...futurePred];
-
-  const predictedMonthly=(slope*(n+15)+intercept)*30;
+  var allLabels=daily.map(function(x){return x.date.slice(5)}).concat(futureLabels);
+  var actualData=costs.concat(Array(7).fill(null));
+  var predData=regLine.concat(futurePred);
+  var predictedMonthly=(slope*(n+15)+intercept)*30;
 
   charts['predict']=new Chart(document.getElementById('chart-predict'),{
     type:'line',
     data:{labels:allLabels,datasets:[
-      {label:'SkutoÄnÃ©',data:actualData,borderColor:'var(--orange)',backgroundColor:'rgba(249,115,22,.1)',fill:true,tension:.3,pointRadius:2,spanGaps:false},
+      {label:'Skutočné',data:actualData,borderColor:'#f97316',backgroundColor:'rgba(249,115,22,.1)',fill:true,tension:.3,pointRadius:2,spanGaps:false},
       {label:'Predikcia',data:predData,borderColor:'#9393a0',borderDash:[6,4],pointRadius:0,tension:.3,fill:false}
     ]},
-    options:{responsive:true,plugins:{legend:{labels:{color:'#e4e4e7'}},subtitle:{display:true,text:'PredpokladanÃ© mesaÄnÃ© nÃ¡klady: '+fU(predictedMonthly),color:'#9393a0',font:{size:12}}},scales:{x:{ticks:{color:'#9393a0',font:{size:11}},grid:{color:'#1e1e2e'}},y:{ticks:{color:'#9393a0',callback:v=>'$'+v.toFixed(3)},grid:{color:'#1e1e2e'}}}}
+    options:{responsive:true,plugins:{legend:{labels:{color:'#e4e4e7'}},subtitle:{display:true,text:'Predpokladané mesačné náklady: '+fU(predictedMonthly),color:'#9393a0',font:{size:12}}},scales:{x:{ticks:{color:'#9393a0',font:{size:11}},grid:{color:'#1e1e2e'}},y:{ticks:{color:'#9393a0',callback:function(v){return'$'+v.toFixed(3)}},grid:{color:'#1e1e2e'}}}}
   });
 }
 
@@ -455,68 +547,116 @@ function renderPrediction(daily){
 function renderPareto(users){
   destroyChart('pareto');
   if(!users.length)return;
-  const sorted=[...users].sort((a,b)=>(b.cost||0)-(a.cost||0));
-  const totalCost=sorted.reduce((s,u)=>s+(u.cost||0),0);
-  let cum=0;
-  const cumPct=sorted.map(u=>{cum+=(u.cost||0);return totalCost?(cum/totalCost)*100:0});
-  const labels=sorted.map(u=>u.display_name||shortId(u.id));
+  var sorted=users.slice().sort(function(a,b){return(b.cost||0)-(a.cost||0)});
+  var totalCost=sorted.reduce(function(s,u){return s+(u.cost||0)},0);
+  var cum=0;
+  var cumPct=sorted.map(function(u){cum+=(u.cost||0);return totalCost?(cum/totalCost)*100:0});
+  var labels=sorted.map(function(u){return u.display_name||shortId(u.id)});
 
   charts['pareto']=new Chart(document.getElementById('chart-pareto'),{
     type:'bar',
-    data:{labels,datasets:[
-      {label:'NÃ¡klady (USD)',data:sorted.map(u=>u.cost||0),backgroundColor:'rgba(249,115,22,.7)',borderRadius:4,yAxisID:'y'},
-      {label:'KumulatÃ­vne %',data:cumPct,type:'line',borderColor:'var(--blue)',pointRadius:3,pointBackgroundColor:'var(--blue)',yAxisID:'y1',fill:false}
+    data:{labels:labels,datasets:[
+      {label:'Náklady (USD)',data:sorted.map(function(u){return u.cost||0}),backgroundColor:'rgba(249,115,22,.7)',borderRadius:4,yAxisID:'y'},
+      {label:'Kumulatívne %',data:cumPct,type:'line',borderColor:'#3b82f6',pointRadius:3,pointBackgroundColor:'#3b82f6',yAxisID:'y1',fill:false}
     ]},
-    options:{responsive:true,plugins:{legend:{labels:{color:'#e4e4e7'}},annotation:false},scales: {
+    options:{responsive:true,plugins:{legend:{labels:{color:'#e4e4e7'}},annotation:false},scales:{
       x:{ticks:{color:'#9393a0',font:{size:11}},grid:{color:'#1e1e2e'}},
-      y:{position:'left',ticks:{color:'#9393a0',callback:v=>'$'+v.toFixed(3)},grid:{color:'#1e1e2e'}},
-      y1:{position:'left',min:0,max:100,ticks:{color:'#9393a0',callback:v=>v+'%'},grid:{display:false}}
+      y:{position:'left',ticks:{color:'#9393a0',callback:function(v){return'$'+v.toFixed(3)}},grid:{color:'#1e1e2e'}},
+      y1:{position:'right',min:0,max:100,ticks:{color:'#9393a0',callback:function(v){return v+'%'}},grid:{display:false}}
     }}
   });
 }
 
 // --- ENGAGEMENT ---
 function renderEngagement(s){
-  const items=[
-    {val:s.totalWorkouts||0,lbl:'TrÃ©ningy dokonÄenÃ©',icon:'ðï¸'},
-    {val:s.totalFoodsLogged||0,lbl:'JedlÃ¡ zalogovanÃ©',icon:'ð'},
-    {val:s.totalTrainingMinutes||0,lbl:'MinÃºty trÃ©ningu',icon:'â±'},
-    {val:s.totalAiConversations||0,lbl:'AI konverzÃ¡cie',icon:'ð¬'}
+  var items=[
+    {val:s.totalWorkouts||0,lbl:'Tréningy dokončené',icon:'🏋️'},
+    {val:s.totalFoodsLogged||0,lbl:'Jedlá zalogované',icon:'🍎'},
+    {val:s.totalTrainingMinutes||0,lbl:'Minúty tréningu',icon:'⏱'},
+    {val:s.totalAiConversations||0,lbl:'AI konverzácie',icon:'💬'}
   ];
-  document.getElementById('engage-row').innerHTML=items.map(i=>`<div class="engage-card"><div style="font-size:24px">${i.icon}</div><div class="val">${fmt(i.val)}</div><div class="lbl">${i.lbl}</div></div>`).join('');
+  document.getElementById('engage-row').innerHTML=items.map(function(i){return'<div class="engage-card"><div style="font-size:24px">'+i.icon+'</div><div class="val">'+fmt(i.val)+'</div><div class="lbl">'+i.lbl+'</div></div>'}).join('');
 }
 
 // --- TABLES ---
 function renderTable(id,obj,fields,keyFn){
-  const tbody=document.querySelector('#'+id+' tbody');
-  const rows=Object.entries(obj).sort((a,b)=>(b[1].requests||0)-(a[1].requests||0));
-  tbody.innerHTML=rows.map(([k,v])=>`<tr><td>${keyFn?keyFn(k):k}</td>${fields.map(f=>`<td>${f==='cost'?fU(v[f]):fmt(v[f])}</td>`).join('')}</tr>`).join('');
+  var tbody=document.querySelector('#'+id+' tbody');
+  var rows=Object.entries(obj).sort(function(a,b){return(b[1].requests||0)-(a[1].requests||0)});
+  tbody.innerHTML=rows.map(function(e){var k=e[0],v=e[1];return'<tr><td>'+(keyFn?keyFn(k):k)+'</td>'+fields.map(function(f){return'<td>'+(f==='cost'?fU(v[f]):fmt(v[f]))+'</td>'}).join('')+'</tr>'}).join('');
 }
 
 function renderUsers(users){
-  const tbody=document.querySelector('#tbl-users tbody');
-  const planBadge=p=>`<span class="badge badge-${p}">${p}</span>`;
-  tbody.innerHTML=users.sort((a,b)=>(b.cost||0)-(a.cost||0)).map(u=>`<tr>
-    <td>${u.display_name||shortId(u.id)}</td>
-    <td>${u.device_model||'-'}</td>
-    <td>${u.os_version||'-'}</td>
-    <td>${u.app_version||'-'}</td>
-    <td>${u.locale||'-'}</td>
-    <td>${planBadge(u.plan||'trial')}</td>
-    <td>${fmt(u.requests)}</td>
-    <td>${fU(u.cost)}</td>
-    <td>${fDate(u.last_seen_at)}</td>
-  </tr>`).join('');
+  var tbody=document.querySelector('#tbl-users tbody');
+  var planBadge=function(p){return'<span class="badge badge-'+p+'">'+p+'</span>'};
+  tbody.innerHTML=users.slice().sort(function(a,b){return(b.cost||0)-(a.cost||0)}).map(function(u){return'<tr>'+
+    '<td>'+(u.display_name||shortId(u.id))+'</td>'+
+    '<td>'+(u.device_model||'-')+'</td>'+
+    '<td>'+(u.os_version||'-')+'</td>'+
+    '<td>'+(u.app_version||'-')+'</td>'+
+    '<td>'+(u.locale||'-')+'</td>'+
+    '<td>'+planBadge(u.plan||'none')+'</td>'+
+    '<td>'+fmt(u.requests)+'</td>'+
+    '<td>'+fU(u.cost)+'</td>'+
+    '<td>'+fDate(u.last_seen_at)+'</td>'+
+  '</tr>'}).join('');
+}
+
+// --- LOCALE MAP ---
+var localeMap=null;
+var LOCALE_COORDS={
+  'sk':{lat:48.67,lng:19.70,name:'Slovensko'},'cs':{lat:49.82,lng:15.47,name:'Česko'},
+  'en':{lat:51.51,lng:-0.13,name:'English'},'de':{lat:51.17,lng:10.45,name:'Nemecko'},
+  'pl':{lat:51.92,lng:19.15,name:'Poľsko'},'hu':{lat:47.16,lng:19.50,name:'Maďarsko'},
+  'fr':{lat:46.60,lng:1.89,name:'Francúzsko'},'es':{lat:40.46,lng:-3.75,name:'Španielsko'},
+  'it':{lat:41.87,lng:12.57,name:'Taliansko'},'pt':{lat:39.40,lng:-8.22,name:'Portugalsko'},
+  'nl':{lat:52.13,lng:5.29,name:'Holandsko'},'ru':{lat:61.52,lng:105.32,name:'Rusko'},
+  'uk':{lat:48.38,lng:31.17,name:'Ukrajina'},'ro':{lat:45.94,lng:24.97,name:'Rumunsko'},
+  'bg':{lat:42.73,lng:25.49,name:'Bulharsko'},'hr':{lat:45.10,lng:15.20,name:'Chorvátsko'},
+  'sr':{lat:44.02,lng:21.01,name:'Srbsko'},'sl':{lat:46.15,lng:14.99,name:'Slovinsko'},
+  'da':{lat:56.26,lng:9.50,name:'Dánsko'},'sv':{lat:60.13,lng:18.64,name:'Švédsko'},
+  'no':{lat:60.47,lng:8.47,name:'Nórsko'},'fi':{lat:61.92,lng:25.75,name:'Fínsko'},
+  'ja':{lat:36.20,lng:138.25,name:'Japonsko'},'ko':{lat:35.91,lng:127.77,name:'Kórea'},
+  'zh':{lat:35.86,lng:104.20,name:'Čína'},'ar':{lat:23.89,lng:45.08,name:'Arabský'},
+  'tr':{lat:38.96,lng:35.24,name:'Turecko'},'el':{lat:39.07,lng:21.82,name:'Grécko'},
+  'he':{lat:31.05,lng:34.85,name:'Izrael'},'vi':{lat:14.06,lng:108.28,name:'Vietnam'},
+  'th':{lat:15.87,lng:100.99,name:'Thajsko'},'id':{lat:-0.79,lng:113.92,name:'Indonézia'},
+  'ms':{lat:4.21,lng:101.98,name:'Malajzia'},'hi':{lat:20.59,lng:78.96,name:'India'},
+  'unknown':{lat:0,lng:0,name:'Neznámy'}
+};
+
+function renderLocaleMap(dist){
+  if(localeMap){localeMap.remove();localeMap=null;}
+  var mapEl=document.getElementById('locale-map');
+  if(!mapEl)return;
+  localeMap=L.map('locale-map',{zoomControl:true,scrollWheelZoom:true,attributionControl:false}).setView([48.5,15],4);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{maxZoom:18}).addTo(localeMap);
+  var entries=Object.entries(dist).sort(function(a,b){return b[1]-a[1]});
+  var maxCount=entries.length?entries[0][1]:1;
+  entries.forEach(function(e){
+    var code=e[0].toLowerCase();
+    var count=e[1];
+    var loc=LOCALE_COORDS[code]||LOCALE_COORDS['unknown'];
+    var radius=Math.max(12,Math.min(40,(count/maxCount)*40));
+    var circle=L.circleMarker([loc.lat,loc.lng],{
+      radius:radius,fillColor:'#f97316',color:'#f97316',weight:2,opacity:0.8,fillOpacity:0.35
+    }).addTo(localeMap);
+    circle.bindPopup('<div class="locale-popup"><div class="code">'+code.toUpperCase()+'</div><div class="count">'+loc.name+'</div><div class="count"><b>'+count+'</b> používateľov</div></div>');
+    L.marker([loc.lat,loc.lng],{
+      icon:L.divIcon({className:'',html:'<div style="color:#f97316;font-weight:700;font-size:12px;text-align:center;text-shadow:0 0 4px #000">'+code.toUpperCase()+'<br><span style="color:#e4e4e7;font-size:11px">'+count+'</span></div>',iconSize:[40,30],iconAnchor:[20,15]})
+    }).addTo(localeMap);
+  });
+  setTimeout(function(){localeMap.invalidateSize()},200);
 }
 
 function renderLocale(dist){
-  const el=document.getElementById('locale-chips');
-  el.innerHTML=Object.entries(dist).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<div class="locale-chip"><strong>${k.toUpperCase()}</strong> ${v}</div>`).join('');
+  var el=document.getElementById('locale-chips');
+  el.innerHTML=Object.entries(dist).sort(function(a,b){return b[1]-a[1]}).map(function(e){return'<div class="locale-chip"><strong>'+e[0].toUpperCase()+'</strong> '+e[1]+'</div>'}).join('');
+  renderLocaleMap(dist);
 }
 
 function renderPricing(pricing){
-  const tbody=document.querySelector('#tbl-pricing tbody');
-  tbody.innerHTML=Object.entries(pricing).map(([k,v])=>`<tr><td>${shortModel(k)}</td><td>$${v.prompt}</td><td>$${v.completion}</td></tr>`).join('');
+  var tbody=document.querySelector('#tbl-pricing tbody');
+  tbody.innerHTML=Object.entries(pricing).map(function(e){return'<tr><td>'+shortModel(e[0])+'</td><td>$'+e[1].prompt+'</td><td>$'+e[1].completion+'</td></tr>'}).join('');
 }
 
 // --- INIT ---
