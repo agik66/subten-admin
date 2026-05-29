@@ -205,6 +205,29 @@ tr:hover td{background:#1a1a28}
   .chart-modal{padding:20px}
   .chart-modal-overlay{padding:16px}
 }
+/* 4K / ultrawide — fit everything on one screen */
+@media(min-width:1800px){
+  #dashboard{padding:20px 40px;max-width:3840px}
+  .kpi-row{grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:14px}
+  .credit-row{grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px}
+  .charts-grid{grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px}
+  .chart-card{padding:16px}
+  .chart-card canvas{max-height:220px}
+  .chart-card h3{font-size:13px;margin-bottom:8px}
+  .section-title{font-size:15px;margin-bottom:10px;margin-top:14px}
+  .kpi-value{font-size:22px}
+  .kpi{padding:14px 16px}
+  .credit-card{padding:16px}
+  .credit-card h3{font-size:13px;margin-bottom:8px}
+  .table-wrap{max-height:280px}
+  .engagement-grid{grid-template-columns:repeat(4,1fr)}
+}
+@media(min-width:2400px){
+  .charts-grid{grid-template-columns:repeat(4,1fr)}
+  .chart-card canvas{max-height:180px}
+  .kpi-row{grid-template-columns:repeat(6,1fr)}
+  .credit-row{grid-template-columns:repeat(4,1fr)}
+}
 </style>
 </head>
 <body>
@@ -622,28 +645,28 @@ function renderCharts(d,rawData){
   // Daily cost line
   destroyChart('daily-cost');
   var dailyCostCfg={type:'line',data:{labels:labels,datasets:[{label:'USD',data:costs,borderColor:'#f97316',backgroundColor:'rgba(249,115,22,.15)',fill:true,tension:.3,pointRadius:2}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#9393a0',font:{size:11}},grid:{color:'#1e1e2e'}},y:{ticks:{color:'#9393a0',callback:function(v){return'$'+v.toFixed(3)}},grid:{color:'#1e1e2e'}}}}};
+  chartConfigs['chart-daily-cost']=cloneDeep(dailyCostCfg);
   charts['daily-cost']=new Chart(document.getElementById('chart-daily-cost'),dailyCostCfg);
-  chartConfigs['chart-daily-cost']=dailyCostCfg;
 
   // Daily requests bar
   destroyChart('daily-req');
   var dailyReqCfg={type:'bar',data:{labels:labels,datasets:[{label:'Requesty',data:reqs,backgroundColor:'rgba(59,130,246,.7)',borderRadius:4}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#9393a0',font:{size:11}},grid:{color:'#1e1e2e'}},y:{ticks:{color:'#9393a0'},grid:{color:'#1e1e2e'}}}}};
+  chartConfigs['chart-daily-req']=cloneDeep(dailyReqCfg);
   charts['daily-req']=new Chart(document.getElementById('chart-daily-req'),dailyReqCfg);
-  chartConfigs['chart-daily-req']=dailyReqCfg;
 
   // Model doughnut
   var models=Object.entries(rawData.byModel||{});
   destroyChart('model');
   var modelCfg={type:'doughnut',data:{labels:models.map(function(e){return shortModel(e[0])}),datasets:[{data:models.map(function(e){return e[1].cost||0}),backgroundColor:chartColors.slice(0,models.length)}]},options:{responsive:true,plugins:{legend:{position:'bottom',labels:{color:'#e4e4e7',font:{size:11},padding:8}}}}};
+  chartConfigs['chart-model']=cloneDeep(modelCfg);
   charts['model']=new Chart(document.getElementById('chart-model'),modelCfg);
-  chartConfigs['chart-model']=modelCfg;
 
   // Task horizontal bar
   var tasks=Object.entries(rawData.byTask||{}).sort(function(a,b){return(b[1].requests||0)-(a[1].requests||0)});
   destroyChart('task');
   var taskCfg={type:'bar',data:{labels:tasks.map(function(e){return e[0]}),datasets:[{label:'Requesty',data:tasks.map(function(e){return e[1].requests}),backgroundColor:'rgba(168,85,247,.7)',borderRadius:4}]},options:{indexAxis:'y',responsive:true,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#9393a0'},grid:{color:'#1e1e2e'}},y:{ticks:{color:'#9393a0',font:{size:11}},grid:{color:'#1e1e2e'}}}}};
+  chartConfigs['chart-task']=cloneDeep(taskCfg);
   charts['task']=new Chart(document.getElementById('chart-task'),taskCfg);
-  chartConfigs['chart-task']=taskCfg;
 }
 
 // --- PREDICTION ---
@@ -675,8 +698,8 @@ function renderPrediction(daily){
       {label:'Skutočné',data:actualData,borderColor:'#f97316',backgroundColor:'rgba(249,115,22,.1)',fill:true,tension:.3,pointRadius:2,spanGaps:false},
       {label:'Predikcia',data:predData,borderColor:'#9393a0',borderDash:[6,4],pointRadius:0,tension:.3,fill:false}
     ]},options:{responsive:true,plugins:{legend:{labels:{color:'#e4e4e7'}},subtitle:{display:true,text:'Predpokladané mesačné náklady: '+fU(predictedMonthly),color:'#9393a0',font:{size:12}}},scales:{x:{ticks:{color:'#9393a0',font:{size:11}},grid:{color:'#1e1e2e'}},y:{ticks:{color:'#9393a0',callback:function(v){return'$'+v.toFixed(3)}},grid:{color:'#1e1e2e'}}}}};
+  chartConfigs['chart-predict']=cloneDeep(predictCfg);
   charts['predict']=new Chart(document.getElementById('chart-predict'),predictCfg);
-  chartConfigs['chart-predict']=predictCfg;
 }
 
 // --- PARETO ---
@@ -697,8 +720,8 @@ function renderPareto(users){
       y:{position:'left',ticks:{color:'#9393a0',callback:function(v){return'$'+v.toFixed(3)}},grid:{color:'#1e1e2e'}},
       y1:{position:'right',min:0,max:100,ticks:{color:'#9393a0',callback:function(v){return v+'%'}},grid:{display:false}}
     }}};
+  chartConfigs['chart-pareto']=cloneDeep(paretoCfg);
   charts['pareto']=new Chart(document.getElementById('chart-pareto'),paretoCfg);
-  chartConfigs['chart-pareto']=paretoCfg;
 }
 
 // --- ENGAGEMENT ---
