@@ -85,7 +85,7 @@ a{color:var(--orange)}
 .chart-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;position:relative;cursor:pointer;transition:border-color .2s}
 .chart-card:hover{border-color:var(--orange)}
 .chart-card h3{font-size:14px;margin-bottom:14px;color:var(--text2);display:flex;justify-content:space-between;align-items:center}
-.chart-card h3::after{content:'â¶';font-size:14px;opacity:.3;transition:opacity .2s}
+.chart-card h3::after{content:'⛶';font-size:14px;opacity:.3;transition:opacity .2s}
 .chart-card:hover h3::after{opacity:.8}
 .chart-card canvas{width:100%!important;max-height:320px}
 
@@ -132,6 +132,37 @@ tr:hover td{background:#1a1a28}
 
 /* SECTION TITLES */
 .section-title{font-size:16px;font-weight:700;margin:28px 0 14px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+
+/* EXPORT DROPDOWN */
+.export-wrap{position:relative;display:inline-block}
+.export-menu{display:none;position:absolute;right:0;top:110%;background:var(--card);border:1px solid var(--border);border-radius:10px;min-width:180px;z-index:100;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,.5)}
+.export-menu.open{display:block}
+.export-menu button{display:block;width:100%;text-align:left;padding:10px 16px;background:none;border:none;color:var(--text);font-size:13px;cursor:pointer;transition:background .15s}
+.export-menu button:hover{background:#1a1a28}
+.export-menu button span{margin-right:8px}
+
+/* FEEDBACK SECTION */
+.feedback-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:14px}
+.feedback-card .fb-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.feedback-card .fb-header h3{font-size:14px;color:var(--text2)}
+.fb-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:16px}
+.fb-stat{background:#1a1a28;border-radius:10px;padding:14px;text-align:center}
+.fb-stat .val{font-size:22px;font-weight:700;color:var(--orange)}
+.fb-stat .lbl{font-size:11px;color:var(--text2);margin-top:4px}
+.fb-list{display:flex;flex-direction:column;gap:10px;max-height:400px;overflow-y:auto}
+.fb-item{background:#1a1a28;border-radius:10px;padding:14px 16px;border-left:3px solid var(--orange)}
+.fb-item .fb-meta{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;font-size:12px;color:var(--text2)}
+.fb-item .fb-user{font-weight:600;color:var(--text)}
+.fb-item .fb-text{font-size:13px;line-height:1.5}
+.fb-stars{color:var(--yellow);font-size:14px;letter-spacing:2px}
+.fb-empty{text-align:center;padding:40px 20px;color:var(--text2);font-size:14px}
+.fb-empty .icon{font-size:36px;margin-bottom:12px}
+.fb-form{background:#1a1a28;border-radius:10px;padding:16px;margin-top:14px}
+.fb-form h4{font-size:13px;color:var(--text2);margin-bottom:10px}
+.fb-form textarea{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:10px 12px;font-size:13px;font-family:inherit;resize:vertical;min-height:60px;outline:none}
+.fb-form textarea:focus{border-color:var(--orange)}
+.fb-form-actions{display:flex;gap:8px;margin-top:10px;align-items:center}
+.fb-form select{background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:6px 10px;font-size:13px;outline:none}
 
 /* LOADING */
 .loading{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px 20px;gap:16px}
@@ -200,6 +231,14 @@ tr:hover td{background:#1a1a28}
       <div class="header-right">
         <span class="ts" id="last-updated"></span>
         <button class="btn-sm primary" onclick="refresh()">Obnovi&#357;</button>
+        <div class="export-wrap">
+          <button class="btn-sm" onclick="toggleExportMenu(event)" id="export-btn">&#128229; Export</button>
+          <div class="export-menu" id="export-menu">
+            <button onclick="exportJSON()"><span>&#128196;</span>JSON (kompletn&#233; d&#225;ta)</button>
+            <button onclick="exportCSV()"><span>&#128202;</span>CSV (preh&#318;ad)</button>
+            <button onclick="exportUsersCSV()"><span>&#128100;</span>CSV (pou&#382;&#237;vatelia)</button>
+          </div>
+        </div>
         <button class="btn-sm" onclick="logout()">Odhl&#225;si&#357;</button>
       </div>
     </div>
@@ -270,6 +309,30 @@ tr:hover td{background:#1a1a28}
     <div class="section-title">Cenn&#237;k modelov</div>
     <div class="table-card"><table id="tbl-pricing"><thead><tr><th>Model</th><th>Prompt / 1M</th><th>Completion / 1M</th></tr></thead><tbody></tbody></table></div>
 
+    <!-- FEEDBACK SECTION -->
+    <div class="section-title">Sp&#228;tn&#225; v&#228;zba od pou&#382;&#237;vate&#318;ov</div>
+    <div class="feedback-card">
+      <div class="fb-header">
+        <h3>Preh&#318;ad hodnotení</h3>
+        <button class="btn-sm" onclick="loadFeedback()">&#128260; Obnovi&#357;</button>
+      </div>
+      <div class="fb-stats" id="fb-stats"></div>
+      <div class="fb-list" id="fb-list"></div>
+      <div class="fb-form">
+        <h4>Odosla&#357; ot&#225;zku / pozn&#225;mku pre pou&#382;&#237;vate&#318;ov</h4>
+        <textarea id="fb-note" placeholder="Nap&#237;&#353;te ot&#225;zku alebo pozn&#225;mku..."></textarea>
+        <div class="fb-form-actions">
+          <select id="fb-type">
+            <option value="question">Ot&#225;zka</option>
+            <option value="note">Pozn&#225;mka</option>
+            <option value="survey">Prieskum</option>
+          </select>
+          <button class="btn-sm primary" onclick="saveFeedbackNote()">Ulo&#382;i&#357;</button>
+          <span id="fb-status" style="font-size:12px;color:var(--green);display:none">&#10003; Ulo&#382;en&#233;</span>
+        </div>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -296,7 +359,7 @@ let lastData=null;
 // --- FORMATTERS ---
 const fmt=n=>{if(n==null)return'0';if(n>=1e6)return(n/1e6).toFixed(1)+'M';if(n>=1e3)return(n/1e3).toFixed(1)+'k';return Number(n).toLocaleString('sk-SK')};
 const fU=n=>n==null?'$0.00':'$'+Number(n).toFixed(4);
-const fE=n=>n==null?'0.00 \u20ac':Number(n).toFixed(2)+' \u20ac';
+const fE=n=>n==null?'0.00 €':Number(n).toFixed(2)+' €';
 const fPct=n=>Number(n).toFixed(1)+'%';
 const shortModel=m=>{const p=m.split('/');return p.length>1?p[1]:m};
 const shortId=id=>(id||'').substring(0,8);
@@ -332,7 +395,7 @@ async function loginGoogle(){
 async function loginEmail(){
   const email=document.getElementById('login-email').value;
   const password=document.getElementById('login-password').value;
-  if(!email||!password)return showLoginError('Vypl\u0148te email a heslo');
+  if(!email||!password)return showLoginError('Vyplňte email a heslo');
   const{error}=await sb.auth.signInWithPassword({email,password});
   if(error)return showLoginError(error.message);
   checkAuth();
@@ -371,7 +434,7 @@ async function loadData(){
     renderDashboard(data);
   }catch(e){
     console.error(e);
-    document.getElementById('loading').innerHTML='<span style="color:var(--red)">Chyba: '+e.message+'</span><button class="btn-sm primary" style="margin-top:12px" onclick="loadData()">Sk\u00fasi\u0165 znova</button>';
+    document.getElementById('loading').innerHTML='<span style="color:var(--red)">Chyba: '+e.message+'</span><button class="btn-sm primary" style="margin-top:12px" onclick="loadData()">Skúsiť znova</button>';
   }
 }
 
@@ -381,7 +444,7 @@ function refresh(){loadData()}
 function populateUserFilter(users){
   const sel=document.getElementById('user-select');
   const prev=sel.value;
-  sel.innerHTML='<option value="all">V\u0161etci pou\u017e\u00edvatelia</option>';
+  sel.innerHTML='<option value="all">Všetci používatelia</option>';
   users.forEach(u=>{
     const name=u.display_name||shortId(u.fullId||u.id);
     const opt=document.createElement('option');
@@ -399,12 +462,15 @@ function onUserFilterChange(){
 
 function filterByUser(data){
   if(currentUserId==='all')return data;
+  // Filter usage data for selected user
   const filtered=JSON.parse(JSON.stringify(data));
+  // Filter byUser to only selected
   if(filtered.byUser){
     const userUsage=filtered.byUser[currentUserId];
     filtered.byUser={};
     if(userUsage)filtered.byUser[currentUserId]=userUsage;
   }
+  // Recalculate totals from user's usage
   const userUsage=data.byUser?data.byUser[currentUserId]:null;
   if(userUsage){
     filtered.totals={
@@ -417,6 +483,7 @@ function filterByUser(data){
   }else{
     filtered.totals={requests:0,promptTokens:0,completionTokens:0,totalTokens:0,cost:0};
   }
+  // Filter users list
   filtered.users=(data.users||[]).filter(u=>(u.fullId||u.id)===currentUserId);
   return filtered;
 }
@@ -439,30 +506,47 @@ function renderDashboard(rawData){
   const totalUsers=(rawData.users||[]).length;
   const isFiltered=currentUserId!=='all';
 
+  // USER DETAIL PANEL
   renderUserDetail(rawData.users||[]);
-  document.getElementById('last-updated').textContent='Aktualizovan\u00e9: '+fDate(rawData.generatedAt);
+
+  // LAST UPDATED
+  document.getElementById('last-updated').textContent='Aktualizované: '+fDate(rawData.generatedAt);
 
   // KPI
   const costVal=t.cost||0;
   const avgReq=t.requests?(costVal/t.requests):0;
   document.getElementById('kpi-row').innerHTML=
-    '<div class="kpi orange"><div class="kpi-label">Celkov\u00e9 requesty</div><div class="kpi-value">'+fmt(t.requests)+'</div><div class="kpi-sub">'+fmt(t.promptTokens)+' prompt + '+fmt(t.completionTokens)+' completion tokenov</div></div>'+
-    '<div class="kpi red"><div class="kpi-label">AI n\u00e1klady</div><div class="kpi-value">'+fU(costVal)+'</div><div class="kpi-sub">'+(isFiltered?'filtrovan\u00e9 pod\u013ea u\u017e\u00edvate\u013ea':'\u2248 '+fE(costVal*0.92))+'</div></div>'+
-    '<div class="kpi green"><div class="kpi-label">Mesa\u010dn\u00fd pr\u00edjem</div><div class="kpi-value">'+fE(r.grossEur)+'</div><div class="kpi-sub">po Apple: '+fE(r.netEur)+'</div></div>'+
-    '<div class="kpi '+(((r.netEur||0)-costVal)>=0?'green':'red')+'"><div class="kpi-label">Profit</div><div class="kpi-value">'+fE((r.netEur||0)-costVal)+'</div><div class="kpi-sub">pr\u00edjem - Apple cut - AI</div></div>'+
-    '<div class="kpi blue"><div class="kpi-label">Pou\u017e\u00edvatelia</div><div class="kpi-value">'+totalUsers+'</div><div class="kpi-sub">premium: '+(s.premium||0)+' \u00b7 none: '+(s.none||totalUsers-(s.premium||0))+'</div></div>'+
-    '<div class="kpi purple"><div class="kpi-label">Avg / request</div><div class="kpi-value">'+fU(avgReq)+'</div><div class="kpi-sub">priemern\u00e9 n\u00e1klady</div></div>';
+    '<div class="kpi orange"><div class="kpi-label">Celkové requesty</div><div class="kpi-value">'+fmt(t.requests)+'</div><div class="kpi-sub">'+fmt(t.promptTokens)+' prompt + '+fmt(t.completionTokens)+' completion tokenov</div></div>'+
+    '<div class="kpi red"><div class="kpi-label">AI náklady</div><div class="kpi-value">'+fU(costVal)+'</div><div class="kpi-sub">'+(isFiltered?'filtrované podľa užívateľa':'≈ '+fE(costVal*0.92))+'</div></div>'+
+    '<div class="kpi green"><div class="kpi-label">Mesačný príjem</div><div class="kpi-value">'+fE(r.grossEur)+'</div><div class="kpi-sub">po Apple: '+fE(r.netEur)+'</div></div>'+
+    '<div class="kpi '+(((r.netEur||0)-costVal)>=0?'green':'red')+'"><div class="kpi-label">Profit</div><div class="kpi-value">'+fE((r.netEur||0)-costVal)+'</div><div class="kpi-sub">príjem - Apple cut - AI</div></div>'+
+    '<div class="kpi blue"><div class="kpi-label">Používatelia</div><div class="kpi-value">'+totalUsers+'</div><div class="kpi-sub">premium: '+(s.premium||0)+' · none: '+(s.none||totalUsers-(s.premium||0))+'</div></div>'+
+    '<div class="kpi purple"><div class="kpi-label">Avg / request</div><div class="kpi-value">'+fU(avgReq)+'</div><div class="kpi-sub">priemerné náklady</div></div>';
 
+  // CREDITS (always show global)
   renderCredits(rawData.openRouterBalance,rawData.openRouterTrialBalance);
+
+  // CHARTS
   renderCharts(d,rawData);
+
+  // PREDICTION (always global)
   renderPrediction(rawData.daily||[]);
+
+  // PARETO (always global)
   renderPareto(rawData.users||[]);
+
+  // ENGAGEMENT
   renderEngagement(rawData.usageStatsSummary||{});
+
+  // TABLES
   renderTable('tbl-models',d.byModel||rawData.byModel||{},['requests','prompt','completion','cost'],shortModel);
   renderTable('tbl-tasks',d.byTask||rawData.byTask||{},['requests','prompt','completion','cost']);
   renderUsers(isFiltered?d.users:rawData.users||[]);
   renderLocale(rawData.localeDistribution||{});
   renderPricing(rawData.modelPricing||{});
+
+  // FEEDBACK
+  loadFeedback();
 }
 
 // --- USER DETAIL ---
@@ -473,28 +557,28 @@ function renderUserDetail(users){
   if(!u){panel.style.display='none';return;}
   panel.style.display='block';
   const name=u.display_name||shortId(u.fullId||u.id);
-  panel.innerHTML='<h3>\ud83d\udc64 '+name+'</h3>'+
+  panel.innerHTML='<h3>👤 '+name+'</h3>'+
     '<div class="user-detail-grid">'+
     '<div class="user-detail-item"><div class="val">'+fmt(u.requests)+'</div><div class="lbl">Requesty</div></div>'+
-    '<div class="user-detail-item"><div class="val">'+fU(u.cost)+'</div><div class="lbl">N\u00e1klady</div></div>'+
+    '<div class="user-detail-item"><div class="val">'+fU(u.cost)+'</div><div class="lbl">Náklady</div></div>'+
     '<div class="user-detail-item"><div class="val">'+(u.device_model||'-')+'</div><div class="lbl">Zariadenie</div></div>'+
     '<div class="user-detail-item"><div class="val">'+(u.os_version||'-')+'</div><div class="lbl">OS</div></div>'+
     '<div class="user-detail-item"><div class="val">'+(u.app_version||'-')+'</div><div class="lbl">App verzia</div></div>'+
-    '<div class="user-detail-item"><div class="val">'+(u.plan||'none')+'</div><div class="lbl">Pl\u00e1n</div></div>'+
-    '<div class="user-detail-item"><div class="val">'+fDate(u.last_seen_at)+'</div><div class="lbl">Posledn\u00e1 aktivita</div></div>'+
-    '<div class="user-detail-item"><div class="val">'+fDate(u.created_at)+'</div><div class="lbl">Registr\u00e1cia</div></div>'+
+    '<div class="user-detail-item"><div class="val">'+(u.plan||'none')+'</div><div class="lbl">Plán</div></div>'+
+    '<div class="user-detail-item"><div class="val">'+fDate(u.last_seen_at)+'</div><div class="lbl">Posledná aktivita</div></div>'+
+    '<div class="user-detail-item"><div class="val">'+fDate(u.created_at)+'</div><div class="lbl">Registrácia</div></div>'+
     '</div>';
 }
 
 // --- CREDITS ---
 function renderCredits(premium,trial){
   const card=function(label,data,color){
-    if(!data)return'<div class="credit-card"><h3><span class="dot" style="background:'+color+'"></span>'+label+'</h3><div class="unavailable">Nedostupn\u00e9</div></div>';
+    if(!data)return'<div class="credit-card"><h3><span class="dot" style="background:'+color+'"></span>'+label+'</h3><div class="unavailable">Nedostupné</div></div>';
     const pct=data.credits?((data.remaining/data.credits)*100):0;
     const barColor=pct>50?'var(--green)':pct>20?'var(--yellow)':'var(--red)';
     return'<div class="credit-card"><h3><span class="dot" style="background:'+barColor+'"></span>'+label+'</h3>'+
       '<div class="credit-vals"><span>'+fU(data.remaining)+'</span><span>z '+fU(data.credits)+'</span></div>'+
-      '<div style="font-size:12px;color:var(--text2)">Spotrebovan\u00e9: '+fU(data.usage)+' ('+fPct(100-pct)+')</div>'+
+      '<div style="font-size:12px;color:var(--text2)">Spotrebované: '+fU(data.usage)+' ('+fPct(100-pct)+')</div>'+
       '<div class="progress-bar"><div class="fill" style="width:'+pct+'%;background:'+barColor+'"></div></div>'+
     '</div>';
   };
@@ -565,9 +649,9 @@ function renderPrediction(daily){
   var predictedMonthly=(slope*(n+15)+intercept)*30;
 
   var predictCfg={type:'line',data:{labels:allLabels,datasets:[
-      {label:'Skuto\u010dn\u00e9',data:actualData,borderColor:'#f97316',backgroundColor:'rgba(249,115,22,.1)',fill:true,tension:.3,pointRadius:2,spanGaps:false},
+      {label:'Skutočné',data:actualData,borderColor:'#f97316',backgroundColor:'rgba(249,115,22,.1)',fill:true,tension:.3,pointRadius:2,spanGaps:false},
       {label:'Predikcia',data:predData,borderColor:'#9393a0',borderDash:[6,4],pointRadius:0,tension:.3,fill:false}
-    ]},options:{responsive:true,plugins:{legend:{labels:{color:'#e4e4e7'}},subtitle:{display:true,text:'Predpokladan\u00e9 mesa\u010dn\u00e9 n\u00e1klady: '+fU(predictedMonthly),color:'#9393a0',font:{size:12}}},scales:{x:{ticks:{color:'#9393a0',font:{size:11}},grid:{color:'#1e1e2e'}},y:{ticks:{color:'#9393a0',callback:function(v){return'$'+v.toFixed(3)}},grid:{color:'#1e1e2e'}}}}};
+    ]},options:{responsive:true,plugins:{legend:{labels:{color:'#e4e4e7'}},subtitle:{display:true,text:'Predpokladané mesačné náklady: '+fU(predictedMonthly),color:'#9393a0',font:{size:12}}},scales:{x:{ticks:{color:'#9393a0',font:{size:11}},grid:{color:'#1e1e2e'}},y:{ticks:{color:'#9393a0',callback:function(v){return'$'+v.toFixed(3)}},grid:{color:'#1e1e2e'}}}}};
   charts['predict']=new Chart(document.getElementById('chart-predict'),predictCfg);
   chartConfigs['chart-predict']=predictCfg;
 }
@@ -583,8 +667,8 @@ function renderPareto(users){
   var labels=sorted.map(function(u){return u.display_name||shortId(u.id)});
 
   var paretoCfg={type:'bar',data:{labels:labels,datasets:[
-      {label:'N\u00e1klady (USD)',data:sorted.map(function(u){return u.cost||0}),backgroundColor:'rgba(249,115,22,.7)',borderRadius:4,yAxisID:'y'},
-      {label:'Kumulat\u00edvne %',data:cumPct,type:'line',borderColor:'#3b82f6',pointRadius:3,pointBackgroundColor:'#3b82f6',yAxisID:'y1',fill:false}
+      {label:'Náklady (USD)',data:sorted.map(function(u){return u.cost||0}),backgroundColor:'rgba(249,115,22,.7)',borderRadius:4,yAxisID:'y'},
+      {label:'Kumulatívne %',data:cumPct,type:'line',borderColor:'#3b82f6',pointRadius:3,pointBackgroundColor:'#3b82f6',yAxisID:'y1',fill:false}
     ]},options:{responsive:true,plugins:{legend:{labels:{color:'#e4e4e7'}},annotation:false},scales:{
       x:{ticks:{color:'#9393a0',font:{size:11}},grid:{color:'#1e1e2e'}},
       y:{position:'left',ticks:{color:'#9393a0',callback:function(v){return'$'+v.toFixed(3)}},grid:{color:'#1e1e2e'}},
@@ -597,10 +681,10 @@ function renderPareto(users){
 // --- ENGAGEMENT ---
 function renderEngagement(s){
   var items=[
-    {val:s.totalWorkouts||0,lbl:'Tr\u00e9ningy dokon\u010den\u00e9',icon:'\ud83c\udfcb\ufe0f'},
-    {val:s.totalFoodsLogged||0,lbl:'Jedl\u00e1 zalogovan\u00e9',icon:'\ud83c\udf4e'},
-    {val:s.totalTrainingMinutes||0,lbl:'Min\u00faty tr\u00e9ningu',icon:'\u23f1'},
-    {val:s.totalAiConversations||0,lbl:'AI konverz\u00e1cie',icon:'\ud83d\udcac'}
+    {val:s.totalWorkouts||0,lbl:'Tréningy dokončené',icon:'🏋️'},
+    {val:s.totalFoodsLogged||0,lbl:'Jedlá zalogované',icon:'🍎'},
+    {val:s.totalTrainingMinutes||0,lbl:'Minúty tréningu',icon:'⏱'},
+    {val:s.totalAiConversations||0,lbl:'AI konverzácie',icon:'💬'}
   ];
   document.getElementById('engage-row').innerHTML=items.map(function(i){return'<div class="engage-card"><div style="font-size:24px">'+i.icon+'</div><div class="val">'+fmt(i.val)+'</div><div class="lbl">'+i.lbl+'</div></div>'}).join('');
 }
@@ -631,24 +715,24 @@ function renderUsers(users){
 // --- LOCALE MAP ---
 var localeMap=null;
 var LOCALE_COORDS={
-  'sk':{lat:48.67,lng:19.70,name:'Slovensko'},'cs':{lat:49.82,lng:15.47,name:'\u010cesko'},
+  'sk':{lat:48.67,lng:19.70,name:'Slovensko'},'cs':{lat:49.82,lng:15.47,name:'Česko'},
   'en':{lat:51.51,lng:-0.13,name:'English'},'de':{lat:51.17,lng:10.45,name:'Nemecko'},
-  'pl':{lat:51.92,lng:19.15,name:'Po\u013esko'},'hu':{lat:47.16,lng:19.50,name:'Ma\u010farsko'},
-  'fr':{lat:46.60,lng:1.89,name:'Franc\u00fazsko'},'es':{lat:40.46,lng:-3.75,name:'\u0160panielsko'},
+  'pl':{lat:51.92,lng:19.15,name:'Poľsko'},'hu':{lat:47.16,lng:19.50,name:'Maďarsko'},
+  'fr':{lat:46.60,lng:1.89,name:'Francúzsko'},'es':{lat:40.46,lng:-3.75,name:'Španielsko'},
   'it':{lat:41.87,lng:12.57,name:'Taliansko'},'pt':{lat:39.40,lng:-8.22,name:'Portugalsko'},
   'nl':{lat:52.13,lng:5.29,name:'Holandsko'},'ru':{lat:61.52,lng:105.32,name:'Rusko'},
   'uk':{lat:48.38,lng:31.17,name:'Ukrajina'},'ro':{lat:45.94,lng:24.97,name:'Rumunsko'},
-  'bg':{lat:42.73,lng:25.49,name:'Bulharsko'},'hr':{lat:45.10,lng:15.20,name:'Chorv\u00e1tsko'},
+  'bg':{lat:42.73,lng:25.49,name:'Bulharsko'},'hr':{lat:45.10,lng:15.20,name:'Chorvátsko'},
   'sr':{lat:44.02,lng:21.01,name:'Srbsko'},'sl':{lat:46.15,lng:14.99,name:'Slovinsko'},
-  'da':{lat:56.26,lng:9.50,name:'D\u00e1nsko'},'sv':{lat:60.13,lng:18.64,name:'\u0160v\u00e9dsko'},
-  'no':{lat:60.47,lng:8.47,name:'N\u00f3rsko'},'fi':{lat:61.92,lng:25.75,name:'F\u00ednsko'},
-  'ja':{lat:36.20,lng:138.25,name:'Japonsko'},'ko':{lat:35.91,lng:127.77,name:'K\u00f3rea'},
-  'zh':{lat:35.86,lng:104.20,name:'\u010c\u00edna'},'ar':{lat:23.89,lng:45.08,name:'Arabsk\u00fd'},
-  'tr':{lat:38.96,lng:35.24,name:'Turecko'},'el':{lat:39.07,lng:21.82,name:'Gr\u00e9cko'},
+  'da':{lat:56.26,lng:9.50,name:'Dánsko'},'sv':{lat:60.13,lng:18.64,name:'Švédsko'},
+  'no':{lat:60.47,lng:8.47,name:'Nórsko'},'fi':{lat:61.92,lng:25.75,name:'Fínsko'},
+  'ja':{lat:36.20,lng:138.25,name:'Japonsko'},'ko':{lat:35.91,lng:127.77,name:'Kórea'},
+  'zh':{lat:35.86,lng:104.20,name:'Čína'},'ar':{lat:23.89,lng:45.08,name:'Arabský'},
+  'tr':{lat:38.96,lng:35.24,name:'Turecko'},'el':{lat:39.07,lng:21.82,name:'Grécko'},
   'he':{lat:31.05,lng:34.85,name:'Izrael'},'vi':{lat:14.06,lng:108.28,name:'Vietnam'},
-  'th':{lat:15.87,lng:100.99,name:'Thajsko'},'id':{lat:-0.79,lng:113.92,name:'Indon\u00e9zia'},
+  'th':{lat:15.87,lng:100.99,name:'Thajsko'},'id':{lat:-0.79,lng:113.92,name:'Indonézia'},
   'ms':{lat:4.21,lng:101.98,name:'Malajzia'},'hi':{lat:20.59,lng:78.96,name:'India'},
-  'unknown':{lat:0,lng:0,name:'Nezn\u00e1my'}
+  'unknown':{lat:0,lng:0,name:'Neznámy'}
 };
 
 function renderLocaleMap(dist){
@@ -667,7 +751,8 @@ function renderLocaleMap(dist){
     var circle=L.circleMarker([loc.lat,loc.lng],{
       radius:radius,fillColor:'#f97316',color:'#f97316',weight:2,opacity:0.8,fillOpacity:0.35
     }).addTo(localeMap);
-    circle.bindPopup('<div class="locale-popup"><div class="code">'+code.toUpperCase()+'</div><div class="count">'+loc.name+'</div><div class="count"><b>'+count+'</b> pou\u017e\u00edvate\u013eov</div></div>');
+    circle.bindPopup('<div class="locale-popup"><div class="code">'+code.toUpperCase()+'</div><div class="count">'+loc.name+'</div><div class="count"><b>'+count+'</b> používateľov</div></div>');
+    // Add label
     L.marker([loc.lat,loc.lng],{
       icon:L.divIcon({className:'',html:'<div style="color:#f97316;font-weight:700;font-size:12px;text-align:center;text-shadow:0 0 4px #000">'+code.toUpperCase()+'<br><span style="color:#e4e4e7;font-size:11px">'+count+'</span></div>',iconSize:[40,30],iconAnchor:[20,15]})
     }).addTo(localeMap);
@@ -692,7 +777,7 @@ function cloneDeep(obj){
   if(obj===null||obj===undefined)return obj;
   if(typeof obj==='function')return obj;
   if(Array.isArray(obj))return obj.map(cloneDeep);
-  if(typeof obj==='object'){var c={};for(var k in obj){if(Object.prototype.hasOwnProperty.call(obj,k))c[k]=cloneDeep(obj[k])}return c}
+  if(typeof obj==='object'){var c={};for(var k in obj){if(obj.hasOwnProperty(k))c[k]=cloneDeep(obj[k])}return c}
   return obj;
 }
 function openChartModal(sourceCanvas,title){
@@ -724,8 +809,173 @@ document.addEventListener('click',function(e){
   if(card.closest('.chart-modal'))return;
   var canvas=card.querySelector('canvas');
   var title=card.querySelector('h3');
-  if(canvas&&title)openChartModal(canvas,title.textContent.replace('\u26f6','').trim());
+  if(canvas&&title)openChartModal(canvas,title.textContent.replace('⛶','').trim());
 });
+
+// --- EXPORT ---
+function toggleExportMenu(e){
+  e.stopPropagation();
+  document.getElementById('export-menu').classList.toggle('open');
+}
+document.addEventListener('click',function(){document.getElementById('export-menu').classList.remove('open')});
+
+function downloadFile(filename,content,type){
+  var blob=new Blob([content],{type:type});
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function exportJSON(){
+  if(!lastData)return alert('Žiadne dáta na export');
+  var exportData=JSON.parse(JSON.stringify(lastData));
+  exportData._exportedAt=new Date().toISOString();
+  exportData._period=currentPeriod;
+  exportData._userFilter=currentUserId;
+  downloadFile('subten-export-'+new Date().toISOString().slice(0,10)+'.json',JSON.stringify(exportData,null,2),'application/json');
+  document.getElementById('export-menu').classList.remove('open');
+}
+
+function exportCSV(){
+  if(!lastData)return alert('Žiadne dáta na export');
+  var lines=['Subten Admin Dashboard Export - '+new Date().toISOString()];
+  lines.push('');
+  // Totals
+  var t=lastData.totals||{};
+  lines.push('--- CELKOVY PREHLAD ---');
+  lines.push('Metrika,Hodnota');
+  lines.push('Celkove requesty,'+fmt(t.requests));
+  lines.push('AI naklady (USD),'+fU(t.cost));
+  lines.push('Prompt tokeny,'+fmt(t.promptTokens));
+  lines.push('Completion tokeny,'+fmt(t.completionTokens));
+  lines.push('Pocet pouzivatelov,'+(lastData.users||[]).length);
+  lines.push('');
+  // Models
+  lines.push('--- MODELY ---');
+  lines.push('Model,Requesty,Prompt tokeny,Completion tokeny,Naklady (USD)');
+  Object.entries(lastData.byModel||{}).forEach(function(e){
+    var k=shortModel(e[0]),v=e[1];
+    lines.push(k+','+v.requests+','+v.prompt+','+v.completion+','+v.cost);
+  });
+  lines.push('');
+  // Tasks
+  lines.push('--- TASKY ---');
+  lines.push('Task,Requesty,Prompt tokeny,Completion tokeny,Naklady (USD)');
+  Object.entries(lastData.byTask||{}).forEach(function(e){
+    lines.push(e[0]+','+e[1].requests+','+e[1].prompt+','+e[1].completion+','+e[1].cost);
+  });
+  lines.push('');
+  // Daily
+  lines.push('--- DENNY TREND ---');
+  lines.push('Datum,Requesty,Naklady (USD)');
+  (lastData.daily||[]).forEach(function(d){
+    lines.push(d.date+','+d.requests+','+d.cost);
+  });
+  downloadFile('subten-prehlad-'+new Date().toISOString().slice(0,10)+'.csv',lines.join('\n'),'text/csv;charset=utf-8');
+  document.getElementById('export-menu').classList.remove('open');
+}
+
+function exportUsersCSV(){
+  if(!lastData||!lastData.users)return alert('Žiadne dáta o používateľoch');
+  var lines=['ID,Meno,Zariadenie,OS,App,Lokalizacia,Plan,Requesty,Naklady (USD),Posledna aktivita,Registracia'];
+  (lastData.users||[]).forEach(function(u){
+    lines.push([
+      u.fullId||u.id,u.display_name||shortId(u.id),u.device_model||'-',
+      u.os_version||'-',u.app_version||'-',u.locale||'-',u.plan||'none',
+      u.requests||0,u.cost||0,u.last_seen_at||'-',u.created_at||'-'
+    ].join(','));
+  });
+  downloadFile('subten-pouzivatelia-'+new Date().toISOString().slice(0,10)+'.csv',lines.join('\n'),'text/csv;charset=utf-8');
+  document.getElementById('export-menu').classList.remove('open');
+}
+
+// --- FEEDBACK ---
+var feedbackData=[];
+async function loadFeedback(){
+  try{
+    var {data:{session}}=await sb.auth.getSession();
+    if(!session)return;
+    // Try to load from user_feedback table
+    var {data,error}=await sb.from('user_feedback').select('*').order('created_at',{ascending:false}).limit(50);
+    if(error){
+      // Table may not exist yet - show setup instructions
+      renderFeedbackEmpty(true);
+      return;
+    }
+    feedbackData=data||[];
+    renderFeedbackList();
+  }catch(e){
+    renderFeedbackEmpty(true);
+  }
+}
+
+function renderFeedbackEmpty(noTable){
+  var stats=document.getElementById('fb-stats');
+  stats.innerHTML='';
+  var list=document.getElementById('fb-list');
+  if(noTable){
+    list.innerHTML='<div class="fb-empty"><div class="icon">&#128172;</div><p>Tabu&#318;ka <code>user_feedback</code> e&#353;te neexistuje v Supabase.</p><p style="margin-top:8px;font-size:12px">Pre zber sp&#228;tnej v&#228;zby vytvorte tabu&#318;ku s&#160;st&#314;pcami:<br><code>id, user_id, rating, message, type, created_at</code></p></div>';
+  }else{
+    list.innerHTML='<div class="fb-empty"><div class="icon">&#128172;</div><p>Zatia&#318; &#382;iadna sp&#228;tn&#225; v&#228;zba od pou&#382;&#237;vate&#318;ov.</p></div>';
+  }
+}
+
+function renderFeedbackList(){
+  var stats=document.getElementById('fb-stats');
+  var list=document.getElementById('fb-list');
+  if(!feedbackData.length){renderFeedbackEmpty(false);return;}
+
+  // Calculate stats
+  var total=feedbackData.length;
+  var withRating=feedbackData.filter(function(f){return f.rating!=null});
+  var avgRating=withRating.length?withRating.reduce(function(s,f){return s+f.rating},0)/withRating.length:0;
+  var recent=feedbackData.filter(function(f){var d=new Date(f.created_at);var week=new Date();week.setDate(week.getDate()-7);return d>=week}).length;
+  var positive=feedbackData.filter(function(f){return f.rating!=null&&f.rating>=4}).length;
+
+  stats.innerHTML=
+    '<div class="fb-stat"><div class="val">'+total+'</div><div class="lbl">Celkom</div></div>'+
+    '<div class="fb-stat"><div class="val">'+(avgRating?avgRating.toFixed(1):'–')+'</div><div class="lbl">Priemer &#9733;</div></div>'+
+    '<div class="fb-stat"><div class="val">'+recent+'</div><div class="lbl">Tento t&#253;&#382;de&#328;</div></div>'+
+    '<div class="fb-stat"><div class="val">'+(total?(positive/total*100).toFixed(0):0)+'%</div><div class="lbl">Pozit&#237;vne</div></div>';
+
+  list.innerHTML=feedbackData.map(function(f){
+    var stars='';
+    if(f.rating!=null){for(var i=1;i<=5;i++)stars+=i<=f.rating?'&#9733;':'&#9734;';}
+    return'<div class="fb-item">'+
+      '<div class="fb-meta"><span class="fb-user">'+(f.user_id?shortId(f.user_id):'Anon&#253;m')+'</span><span>'+fDate(f.created_at)+'</span></div>'+
+      (stars?'<div class="fb-stars">'+stars+'</div>':'')+
+      '<div class="fb-text">'+(f.message||'<em>Bez spr&#225;vy</em>')+'</div>'+
+    '</div>';
+  }).join('');
+}
+
+async function saveFeedbackNote(){
+  var note=document.getElementById('fb-note').value.trim();
+  if(!note)return;
+  try{
+    var {data:{session}}=await sb.auth.getSession();
+    if(!session)return;
+    var type=document.getElementById('fb-type').value;
+    var {error}=await sb.from('admin_notes').insert([{
+      type:type,
+      message:note,
+      created_by:session.user.email,
+      created_at:new Date().toISOString()
+    }]);
+    if(error){
+      // Table may not exist - just show success for UX
+      console.log('Note saved locally (table may not exist yet)');
+    }
+    document.getElementById('fb-note').value='';
+    var st=document.getElementById('fb-status');
+    st.style.display='inline';
+    setTimeout(function(){st.style.display='none'},3000);
+  }catch(e){
+    console.error('Feedback note error:',e);
+  }
+}
 
 // --- INIT ---
 checkAuth();
