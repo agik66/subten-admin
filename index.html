@@ -116,9 +116,10 @@ tr:hover td{background:#1a1a28}
 .badge-premium{background:#22c55e20;color:var(--green)}
 .badge-byok{background:#3b82f620;color:var(--blue)}
 .badge-none{background:#9393a020;color:var(--text2)}
-.locale-chips{display:flex;gap:8px;flex-wrap:wrap}
+.locale-chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
 .locale-chip{background:#1a1a28;border:1px solid var(--border);border-radius:8px;padding:6px 14px;font-size:13px}
 .locale-chip strong{color:var(--orange)}
+.locale-chip .flag{margin-right:4px}
 
 /* MAP */
 .map-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:20px}
@@ -129,6 +130,14 @@ tr:hover td{background:#1a1a28}
 .locale-popup{text-align:center;font-family:inherit}
 .locale-popup .code{font-size:18px;font-weight:700;color:#f97316}
 .locale-popup .count{font-size:13px;color:#666}
+
+/* LOCALE TABS */
+.locale-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.locale-tabs{display:flex;gap:6px;background:#0d0d14;border-radius:10px;padding:4px}
+.locale-tab{padding:8px 18px;border-radius:8px;border:none;background:transparent;color:var(--text2);font-size:13px;font-weight:600;cursor:pointer;transition:all .2s}
+.locale-tab:hover{color:var(--text)}
+.locale-tab.active{background:var(--orange);color:#fff}
+.lang-chart-wrap{max-width:420px;margin:0 auto;padding:10px 0}
 
 /* SECTION TITLES */
 .section-title{font-size:16px;font-weight:700;margin:28px 0 14px;padding-bottom:8px;border-bottom:1px solid var(--border)}
@@ -303,8 +312,22 @@ tr:hover td{background:#1a1a28}
     <div class="table-card"><table id="tbl-users"><thead><tr><th>Meno/ID</th><th>Zariadenie</th><th>OS</th><th>App</th><th>Lokaliz&#225;cia</th><th>Pl&#225;n</th><th>Requesty</th><th>N&#225;klady</th><th>Posledn&#225; aktivita</th></tr></thead><tbody></tbody></table></div>
 
     <div class="section-title">Lokaliz&#225;cia</div>
-    <div class="map-card"><h3>Mapa pou&#382;&#237;vate&#318;ov pod&#318;a lok&#225;lu</h3><div id="locale-map"></div></div>
-    <div class="table-card"><div class="locale-chips" id="locale-chips"></div></div>
+    <div class="map-card">
+      <div class="locale-header">
+        <div class="locale-tabs">
+          <button class="locale-tab active" id="tab-map" onclick="switchLocaleView('map')">&#127758; Krajiny</button>
+          <button class="locale-tab" id="tab-lang" onclick="switchLocaleView('lang')">&#128202; Jazyky</button>
+        </div>
+      </div>
+      <div id="locale-map-panel">
+        <div id="locale-map"></div>
+        <div class="locale-chips" id="country-chips"></div>
+      </div>
+      <div id="locale-lang-panel" style="display:none">
+        <div class="lang-chart-wrap"><canvas id="lang-chart"></canvas></div>
+        <div class="locale-chips" id="lang-chips"></div>
+      </div>
+    </div>
 
     <div class="section-title">Cenn&#237;k modelov</div>
     <div class="table-card"><table id="tbl-pricing"><thead><tr><th>Model</th><th>Prompt / 1M</th><th>Completion / 1M</th></tr></thead><tbody></tbody></table></div>
@@ -714,56 +737,130 @@ function renderUsers(users){
 
 // --- LOCALE MAP ---
 var localeMap=null;
-var LOCALE_COORDS={
-  'sk':{lat:48.67,lng:19.70,name:'Slovensko'},'cs':{lat:49.82,lng:15.47,name:'Česko'},
-  'en':{lat:51.51,lng:-0.13,name:'English'},'de':{lat:51.17,lng:10.45,name:'Nemecko'},
-  'pl':{lat:51.92,lng:19.15,name:'Poľsko'},'hu':{lat:47.16,lng:19.50,name:'Maďarsko'},
-  'fr':{lat:46.60,lng:1.89,name:'Francúzsko'},'es':{lat:40.46,lng:-3.75,name:'Španielsko'},
-  'it':{lat:41.87,lng:12.57,name:'Taliansko'},'pt':{lat:39.40,lng:-8.22,name:'Portugalsko'},
-  'nl':{lat:52.13,lng:5.29,name:'Holandsko'},'ru':{lat:61.52,lng:105.32,name:'Rusko'},
-  'uk':{lat:48.38,lng:31.17,name:'Ukrajina'},'ro':{lat:45.94,lng:24.97,name:'Rumunsko'},
-  'bg':{lat:42.73,lng:25.49,name:'Bulharsko'},'hr':{lat:45.10,lng:15.20,name:'Chorvátsko'},
-  'sr':{lat:44.02,lng:21.01,name:'Srbsko'},'sl':{lat:46.15,lng:14.99,name:'Slovinsko'},
-  'da':{lat:56.26,lng:9.50,name:'Dánsko'},'sv':{lat:60.13,lng:18.64,name:'Švédsko'},
-  'no':{lat:60.47,lng:8.47,name:'Nórsko'},'fi':{lat:61.92,lng:25.75,name:'Fínsko'},
-  'ja':{lat:36.20,lng:138.25,name:'Japonsko'},'ko':{lat:35.91,lng:127.77,name:'Kórea'},
-  'zh':{lat:35.86,lng:104.20,name:'Čína'},'ar':{lat:23.89,lng:45.08,name:'Arabský'},
-  'tr':{lat:38.96,lng:35.24,name:'Turecko'},'el':{lat:39.07,lng:21.82,name:'Grécko'},
-  'he':{lat:31.05,lng:34.85,name:'Izrael'},'vi':{lat:14.06,lng:108.28,name:'Vietnam'},
-  'th':{lat:15.87,lng:100.99,name:'Thajsko'},'id':{lat:-0.79,lng:113.92,name:'Indonézia'},
-  'ms':{lat:4.21,lng:101.98,name:'Malajzia'},'hi':{lat:20.59,lng:78.96,name:'India'},
-  'unknown':{lat:0,lng:0,name:'Neznámy'}
+var langChartInstance=null;
+
+// Country data: ISO 3166-1 alpha-2 → coordinates, name, flag
+var COUNTRY_DATA={
+  'SK':{lat:48.67,lng:19.70,name:'Slovensko',flag:'🇸🇰'},'CZ':{lat:49.82,lng:15.47,name:'Česko',flag:'🇨🇿'},
+  'US':{lat:37.09,lng:-95.71,name:'USA',flag:'🇺🇸'},'GB':{lat:55.38,lng:-3.44,name:'UK',flag:'🇬🇧'},
+  'DE':{lat:51.17,lng:10.45,name:'Nemecko',flag:'🇩🇪'},'PL':{lat:51.92,lng:19.15,name:'Poľsko',flag:'🇵🇱'},
+  'HU':{lat:47.16,lng:19.50,name:'Maďarsko',flag:'🇭🇺'},'FR':{lat:46.60,lng:1.89,name:'Francúzsko',flag:'🇫🇷'},
+  'ES':{lat:40.46,lng:-3.75,name:'Španielsko',flag:'🇪🇸'},'IT':{lat:41.87,lng:12.57,name:'Taliansko',flag:'🇮🇹'},
+  'PT':{lat:39.40,lng:-8.22,name:'Portugalsko',flag:'🇵🇹'},'NL':{lat:52.13,lng:5.29,name:'Holandsko',flag:'🇳🇱'},
+  'RU':{lat:61.52,lng:105.32,name:'Rusko',flag:'🇷🇺'},'UA':{lat:48.38,lng:31.17,name:'Ukrajina',flag:'🇺🇦'},
+  'RO':{lat:45.94,lng:24.97,name:'Rumunsko',flag:'🇷🇴'},'BG':{lat:42.73,lng:25.49,name:'Bulharsko',flag:'🇧🇬'},
+  'HR':{lat:45.10,lng:15.20,name:'Chorvátsko',flag:'🇭🇷'},'RS':{lat:44.02,lng:21.01,name:'Srbsko',flag:'🇷🇸'},
+  'SI':{lat:46.15,lng:14.99,name:'Slovinsko',flag:'🇸🇮'},'AT':{lat:47.52,lng:14.55,name:'Rakúsko',flag:'🇦🇹'},
+  'CH':{lat:46.82,lng:8.23,name:'Švajčiarsko',flag:'🇨🇭'},'DK':{lat:56.26,lng:9.50,name:'Dánsko',flag:'🇩🇰'},
+  'SE':{lat:60.13,lng:18.64,name:'Švédsko',flag:'🇸🇪'},'NO':{lat:60.47,lng:8.47,name:'Nórsko',flag:'🇳🇴'},
+  'FI':{lat:61.92,lng:25.75,name:'Fínsko',flag:'🇫🇮'},'JP':{lat:36.20,lng:138.25,name:'Japonsko',flag:'🇯🇵'},
+  'KR':{lat:35.91,lng:127.77,name:'Kórea',flag:'🇰🇷'},'CN':{lat:35.86,lng:104.20,name:'Čína',flag:'🇨🇳'},
+  'TR':{lat:38.96,lng:35.24,name:'Turecko',flag:'🇹🇷'},'GR':{lat:39.07,lng:21.82,name:'Grécko',flag:'🇬🇷'},
+  'IL':{lat:31.05,lng:34.85,name:'Izrael',flag:'🇮🇱'},'IN':{lat:20.59,lng:78.96,name:'India',flag:'🇮🇳'},
+  'AU':{lat:-25.27,lng:133.78,name:'Austrália',flag:'🇦🇺'},'CA':{lat:56.13,lng:-106.35,name:'Kanada',flag:'🇨🇦'},
+  'BR':{lat:-14.24,lng:-51.93,name:'Brazília',flag:'🇧🇷'},'MX':{lat:23.63,lng:-102.55,name:'Mexiko',flag:'🇲🇽'}
 };
 
-function renderLocaleMap(dist){
+// Language data: ISO 639-1 → name
+var LANG_DATA={
+  'sk':'Slovenčina','cs':'Čeština','en':'Angličtina','de':'Nemčina','pl':'Poľština',
+  'hu':'Maďarčina','fr':'Francúzština','es':'Španielčina','it':'Taliančina','pt':'Portugalčina',
+  'nl':'Holandčina','ru':'Ruština','uk':'Ukrajinčina','ro':'Rumunčina','bg':'Bulharčina',
+  'hr':'Chorvátčina','sr':'Srbčina','sl':'Slovinčina','da':'Dánčina','sv':'Švédčina',
+  'no':'Nórčina','fi':'Fínčina','ja':'Japončina','ko':'Kórejčina','zh':'Čínština',
+  'ar':'Arabčina','tr':'Turečtina','el':'Gréčtina','he':'Hebrejčina','vi':'Vietnamčina',
+  'th':'Thajčina','id':'Indonézština','ms':'Malajčina','hi':'Hindčina'
+};
+
+// Fallback: map language code → likely country when no country in locale
+var LANG_TO_COUNTRY={
+  'sk':'SK','cs':'CZ','de':'DE','pl':'PL','hu':'HU','fr':'FR','es':'ES','it':'IT',
+  'pt':'PT','nl':'NL','ru':'RU','uk':'UA','ro':'RO','bg':'BG','hr':'HR','sr':'RS',
+  'sl':'SI','da':'DK','sv':'SE','no':'NO','fi':'FI','ja':'JP','ko':'KR','zh':'CN',
+  'ar':'SA','tr':'TR','el':'GR','he':'IL','vi':'VN','th':'TH','id':'ID','ms':'MY','hi':'IN'
+};
+
+function parseLocales(dist){
+  var countries={};
+  var languages={};
+  Object.entries(dist).forEach(function(e){
+    var raw=e[0]; var count=e[1];
+    var parts=raw.replace('-','_').split('_');
+    var lang=parts[0].toLowerCase();
+    var country=parts[1]?parts[1].toUpperCase():(LANG_TO_COUNTRY[lang]||null);
+
+    // Aggregate languages
+    var langName=LANG_DATA[lang]||lang;
+    languages[lang]=(languages[lang]||0)+count;
+
+    // Aggregate countries
+    if(country){
+      countries[country]=(countries[country]||0)+count;
+    }
+  });
+  return{countries:countries,languages:languages};
+}
+
+function renderCountryMap(countries){
   if(localeMap){localeMap.remove();localeMap=null;}
   var mapEl=document.getElementById('locale-map');
   if(!mapEl)return;
   localeMap=L.map('locale-map',{zoomControl:true,scrollWheelZoom:true,attributionControl:false}).setView([48.5,15],4);
   L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{maxZoom:18}).addTo(localeMap);
-  var entries=Object.entries(dist).sort(function(a,b){return b[1]-a[1]});
+  var entries=Object.entries(countries).sort(function(a,b){return b[1]-a[1]});
   var maxCount=entries.length?entries[0][1]:1;
   entries.forEach(function(e){
-    var code=e[0].toLowerCase();
+    var code=e[0];
     var count=e[1];
-    var loc=LOCALE_COORDS[code]||LOCALE_COORDS['unknown'];
-    var radius=Math.max(12,Math.min(40,(count/maxCount)*40));
-    var circle=L.circleMarker([loc.lat,loc.lng],{
+    var cd=COUNTRY_DATA[code];
+    if(!cd)return;
+    var radius=Math.max(14,Math.min(45,(count/maxCount)*45));
+    var circle=L.circleMarker([cd.lat,cd.lng],{
       radius:radius,fillColor:'#f97316',color:'#f97316',weight:2,opacity:0.8,fillOpacity:0.35
     }).addTo(localeMap);
-    circle.bindPopup('<div class="locale-popup"><div class="code">'+code.toUpperCase()+'</div><div class="count">'+loc.name+'</div><div class="count"><b>'+count+'</b> používateľov</div></div>');
-    // Add label
-    L.marker([loc.lat,loc.lng],{
-      icon:L.divIcon({className:'',html:'<div style="color:#f97316;font-weight:700;font-size:12px;text-align:center;text-shadow:0 0 4px #000">'+code.toUpperCase()+'<br><span style="color:#e4e4e7;font-size:11px">'+count+'</span></div>',iconSize:[40,30],iconAnchor:[20,15]})
+    circle.bindPopup('<div class="locale-popup"><div class="code">'+cd.flag+' '+cd.name+'</div><div class="count"><b>'+count+'</b> používateľov</div></div>');
+    L.marker([cd.lat,cd.lng],{
+      icon:L.divIcon({className:'',html:'<div style="color:#f97316;font-weight:700;font-size:12px;text-align:center;text-shadow:0 0 4px #000">'+cd.flag+'<br><span style="color:#e4e4e7;font-size:11px">'+count+'</span></div>',iconSize:[40,30],iconAnchor:[20,15]})
     }).addTo(localeMap);
   });
   setTimeout(function(){localeMap.invalidateSize()},200);
+  // Country chips
+  var el=document.getElementById('country-chips');
+  el.innerHTML=entries.map(function(e){var cd=COUNTRY_DATA[e[0]];return'<div class="locale-chip"><span class="flag">'+(cd?cd.flag:'')+'</span><strong>'+(cd?cd.name:e[0])+'</strong> '+e[1]+'</div>'}).join('');
+}
+
+function renderLangChart(languages){
+  var entries=Object.entries(languages).sort(function(a,b){return b[1]-a[1]});
+  var labels=entries.map(function(e){return LANG_DATA[e[0]]||e[0]});
+  var data=entries.map(function(e){return e[1]});
+  var colors=['#f97316','#3b82f6','#22c55e','#a855f7','#eab308','#ef4444','#06b6d4','#ec4899','#84cc16','#f59e0b'];
+  if(langChartInstance){langChartInstance.destroy();}
+  var ctx=document.getElementById('lang-chart');
+  if(!ctx)return;
+  langChartInstance=new Chart(ctx,{
+    type:'doughnut',
+    data:{labels:labels,datasets:[{data:data,backgroundColor:colors.slice(0,data.length),borderWidth:0}]},
+    options:{responsive:true,plugins:{legend:{position:'bottom',labels:{color:'#e4e4e7',padding:14,font:{size:13}}},tooltip:{callbacks:{label:function(c){return c.label+': '+c.raw+' použ.'}}}}}
+  });
+  // Lang chips
+  var el=document.getElementById('lang-chips');
+  el.innerHTML=entries.map(function(e,i){return'<div class="locale-chip"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:'+(colors[i%colors.length])+';margin-right:6px"></span><strong>'+(LANG_DATA[e[0]]||e[0])+'</strong> '+e[1]+'</div>'}).join('');
+}
+
+var currentLocaleView='map';
+function switchLocaleView(view){
+  currentLocaleView=view;
+  document.getElementById('locale-map-panel').style.display=view==='map'?'block':'none';
+  document.getElementById('locale-lang-panel').style.display=view==='lang'?'block':'none';
+  document.getElementById('tab-map').className='locale-tab'+(view==='map'?' active':'');
+  document.getElementById('tab-lang').className='locale-tab'+(view==='lang'?' active':'');
+  if(view==='map'&&localeMap)setTimeout(function(){localeMap.invalidateSize()},100);
 }
 
 function renderLocale(dist){
-  var el=document.getElementById('locale-chips');
-  el.innerHTML=Object.entries(dist).sort(function(a,b){return b[1]-a[1]}).map(function(e){return'<div class="locale-chip"><strong>'+e[0].toUpperCase()+'</strong> '+e[1]+'</div>'}).join('');
-  renderLocaleMap(dist);
+  var parsed=parseLocales(dist);
+  renderCountryMap(parsed.countries);
+  renderLangChart(parsed.languages);
 }
 
 function renderPricing(pricing){
