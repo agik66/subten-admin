@@ -218,24 +218,45 @@ tr:hover td{background:var(--card2)}
 .cohort-cell{border-radius:4px;padding:6px 8px}
 
 /* GEO MAP */
-.map-container{position:relative;width:100%;overflow:hidden;border-radius:10px;background:var(--bg)}
-.map-container svg{display:block;width:100%}
-.map-container path.country{fill:var(--card2);stroke:var(--border);stroke-width:.4;transition:fill .25s,stroke .2s;cursor:default}
-.map-container path.country:hover{stroke:var(--text);stroke-width:.8}
+.map-header{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:8px}
+.map-region-btns{display:flex;gap:3px;background:var(--card2);border-radius:8px;padding:3px}
+.map-rbtn{padding:5px 14px;border:none;border-radius:6px;background:transparent;color:var(--text2);font-size:12px;font-weight:600;cursor:pointer;transition:all .2s}
+.map-rbtn:hover{color:var(--text)}
+.map-rbtn.active{background:var(--orange);color:#fff}
+.map-layout{display:flex;min-height:400px}
+.map-main{position:relative;flex:1;min-width:0;background:var(--bg)}
+.map-container{width:100%;height:100%;overflow:hidden;cursor:grab}
+.map-container:active{cursor:grabbing}
+.map-container svg{display:block;width:100%;height:100%}
+.map-container path.country{fill:var(--card2);stroke:#2a2a3e;stroke-width:.4;transition:fill .2s;cursor:default}
+.map-container path.country:hover{stroke:var(--text);stroke-width:.7}
 .map-container path.country.has-data{cursor:pointer}
-.map-tooltip{position:fixed;background:var(--card);border:1px solid var(--border2);border-radius:10px;padding:10px 16px;font-size:13px;pointer-events:none;z-index:200;box-shadow:0 12px 36px rgba(0,0,0,.5);display:none;max-width:220px}
+.map-container path.country.selected{stroke:var(--orange);stroke-width:2}
+.map-zoom-controls{position:absolute;bottom:12px;right:12px;display:flex;flex-direction:column;gap:4px}
+.map-zoom-controls button{width:32px;height:32px;border:1px solid var(--border2);border-radius:8px;background:var(--card);color:var(--text);font-size:16px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;line-height:1}
+.map-zoom-controls button:hover{background:var(--orange);color:#fff;border-color:var(--orange)}
+.map-sidebar{width:230px;border-left:1px solid var(--border);overflow-y:auto;max-height:400px;flex-shrink:0;background:var(--card)}
+.map-sb-title{font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.8px;padding:14px 16px 8px;position:sticky;top:0;background:var(--card);z-index:2}
+.map-sb-item{display:flex;align-items:center;gap:10px;padding:8px 16px;cursor:pointer;transition:background .15s;border-left:3px solid transparent}
+.map-sb-item:hover{background:var(--card2)}
+.map-sb-item.active{background:var(--card2);border-left-color:var(--orange)}
+.map-sb-rank{font-size:11px;color:var(--text3);font-weight:700;min-width:16px}
+.map-sb-flag{font-size:18px}
+.map-sb-info{flex:1;min-width:0}
+.map-sb-name{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.map-sb-sub{font-size:11px;color:var(--text2)}
+.map-sb-val{font-size:15px;font-weight:700;color:var(--orange)}
+.map-sb-bar{height:3px;background:var(--card2);border-radius:2px;margin-top:6px;margin:0 16px 2px}
+.map-sb-bar .fill{height:100%;border-radius:2px;background:var(--orange);transition:width .3s}
+.map-tooltip{position:fixed;background:var(--card);border:1px solid var(--border2);border-radius:10px;padding:10px 16px;font-size:13px;pointer-events:none;z-index:200;box-shadow:0 12px 36px rgba(0,0,0,.5);display:none;max-width:240px}
 .map-tooltip .tt-country{font-weight:700;font-size:15px;margin-bottom:3px;display:flex;align-items:center;gap:8px}
 .map-tooltip .tt-val{color:var(--orange);font-weight:700}
 .map-tooltip .tt-pct{color:var(--text2);font-size:12px}
-.map-legend-bar{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--text2)}
-.map-legend-gradient{width:120px;height:8px;border-radius:4px}
-.map-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-top:16px}
-.map-stat-row{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--card2);border-radius:10px;font-size:13px}
-.map-stat-row .ms-flag{font-size:22px;flex-shrink:0}
-.map-stat-row .ms-name{font-weight:600;flex:1}
-.map-stat-row .ms-count{font-weight:700;color:var(--orange);font-size:16px}
-.map-stat-row .ms-bar{width:60px;height:6px;background:var(--card);border-radius:3px;overflow:hidden}
-.map-stat-row .ms-bar .fill{height:100%;border-radius:3px}
+.map-tooltip .tt-bar{height:4px;background:var(--card2);border-radius:2px;margin-top:6px}
+.map-tooltip .tt-bar .fill{height:100%;border-radius:2px;background:var(--orange)}
+.map-legend-bar{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text2)}
+.map-legend-gradient{width:90px;height:6px;border-radius:3px}
+@media(max-width:700px){.map-layout{flex-direction:column}.map-sidebar{width:100%;max-height:200px;border-left:none;border-top:1px solid var(--border)}.map-layout .map-main{min-height:280px}}
 </style>
 </head>
 <body>
@@ -335,14 +356,35 @@ tr:hover td{background:var(--card2)}
 
       <!-- GEO MAP (Power BI style) -->
       <div class="section-title">🌍 Mapa používateľov</div>
-      <div class="chart-card" style="margin-bottom:20px">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
-          <h3 style="margin:0">Geografické rozloženie podľa lokalizácie</h3>
-          <div id="map-legend" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap"></div>
+      <div class="chart-card" style="margin-bottom:20px;padding:0;overflow:hidden">
+        <!-- Map header bar -->
+        <div class="map-header">
+          <h3 style="margin:0;font-size:15px">Geografické rozloženie</h3>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <div id="map-region-btns" class="map-region-btns">
+              <button class="map-rbtn active" data-region="world">Svet</button>
+              <button class="map-rbtn" data-region="europe">Európa</button>
+            </div>
+            <div id="map-legend" style="display:flex;align-items:center;gap:8px"></div>
+          </div>
         </div>
-        <div id="geo-map" class="map-container"></div>
-        <div id="geo-map-tooltip" class="map-tooltip"></div>
-        <div id="map-stats-grid" class="map-stats"></div>
+        <!-- Map + sidebar layout -->
+        <div class="map-layout">
+          <div class="map-main">
+            <div id="geo-map" class="map-container"></div>
+            <div id="geo-map-tooltip" class="map-tooltip"></div>
+            <!-- Zoom controls -->
+            <div class="map-zoom-controls">
+              <button id="map-zoom-in" title="Priblížiť">+</button>
+              <button id="map-zoom-out" title="Oddialiť">−</button>
+              <button id="map-zoom-reset" title="Reset">⟲</button>
+            </div>
+          </div>
+          <div class="map-sidebar" id="map-sidebar">
+            <div class="map-sb-title">Top krajiny</div>
+            <div id="map-top-list"></div>
+          </div>
+        </div>
       </div>
 
       <div class="section-title">Modely</div>
@@ -1077,6 +1119,9 @@ const A2_TO_A3={
 };
 
 let _worldGeo=null;
+const NUM_TO_A3={"004":"AFG","008":"ALB","012":"DZA","020":"AND","024":"AGO","028":"ATG","032":"ARG","051":"ARM","036":"AUS","040":"AUT","031":"AZE","044":"BHS","048":"BHR","050":"BGD","052":"BRB","112":"BLR","056":"BEL","084":"BLZ","204":"BEN","064":"BTN","068":"BOL","070":"BIH","072":"BWA","076":"BRA","096":"BRN","100":"BGR","854":"BFA","108":"BDI","116":"KHM","120":"CMR","124":"CAN","132":"CPV","140":"CAF","148":"TCD","152":"CHL","156":"CHN","170":"COL","174":"COM","178":"COG","180":"COD","188":"CRI","384":"CIV","191":"HRV","192":"CUB","196":"CYP","203":"CZE","208":"DNK","262":"DJI","212":"DMA","214":"DOM","218":"ECU","818":"EGY","222":"SLV","226":"GNQ","232":"ERI","233":"EST","748":"SWZ","231":"ETH","242":"FJI","246":"FIN","250":"FRA","266":"GAB","270":"GMB","268":"GEO","276":"DEU","288":"GHA","300":"GRC","308":"GRD","320":"GTM","324":"GIN","624":"GNB","328":"GUY","332":"HTI","340":"HND","348":"HUN","352":"ISL","356":"IND","360":"IDN","364":"IRN","368":"IRQ","372":"IRL","376":"ISR","380":"ITA","388":"JAM","392":"JPN","400":"JOR","398":"KAZ","404":"KEN","296":"KIR","408":"PRK","410":"KOR","414":"KWT","417":"KGZ","418":"LAO","428":"LVA","422":"LBN","426":"LSO","430":"LBR","434":"LBY","438":"LIE","440":"LTU","442":"LUX","807":"MKD","450":"MDG","454":"MWI","458":"MYS","462":"MDV","466":"MLI","470":"MLT","584":"MHL","478":"MRT","480":"MUS","484":"MEX","583":"FSM","498":"MDA","492":"MCO","496":"MNG","499":"MNE","504":"MAR","508":"MOZ","104":"MMR","516":"NAM","520":"NRU","524":"NPL","528":"NLD","554":"NZL","558":"NIC","562":"NER","566":"NGA","578":"NOR","512":"OMN","586":"PAK","591":"PAN","598":"PNG","600":"PRY","604":"PER","608":"PHL","616":"POL","620":"PRT","634":"QAT","642":"ROU","643":"RUS","646":"RWA","659":"KNA","662":"LCA","670":"VCT","882":"WSM","674":"SMR","678":"STP","682":"SAU","686":"SEN","688":"SRB","690":"SYC","694":"SLE","702":"SGP","703":"SVK","705":"SVN","090":"SLB","706":"SOM","710":"ZAF","728":"SSD","724":"ESP","144":"LKA","736":"SDN","740":"SUR","752":"SWE","756":"CHE","760":"SYR","762":"TJK","834":"TZA","764":"THA","626":"TLS","768":"TGO","776":"TON","780":"TTO","788":"TUN","792":"TUR","795":"TKM","798":"TUV","800":"UGA","804":"UKR","784":"ARE","826":"GBR","840":"USA","858":"URY","860":"UZB","548":"VUT","862":"VEN","704":"VNM","887":"YEM","894":"ZMB","716":"ZWE","-99":"CYN","010":"ATA"};
+const EU_CODES=new Set(['SVK','CZE','DEU','AUT','POL','HUN','FRA','ESP','ITA','GBR','NLD','CHE','ROU','BGR','HRV','SVN','SRB','UKR','RUS','SWE','NOR','FIN','DNK','GRC','TUR','ISR','BLR','BEL','IRL','PRT','ISL','EST','LVA','LTU','LUX','MKD','BIH','MNE','MDA','ALB','GEO','ARM','AZE','CYP']);
+
 async function renderGeoMap(users){
   // ── Aggregate by country (alpha-2) ──
   const byCountry={};
@@ -1090,116 +1135,206 @@ async function renderGeoMap(users){
   const maxCount=sorted.length>0?sorted[0][1]:1;
   const totalMapped=sorted.reduce((s,[,c])=>s+c,0);
 
-  // ── Build alpha-3 lookup for TopoJSON matching ──
+  // ── Build alpha-3 lookup ──
   const byA3={};
-  sorted.forEach(([cc,cnt])=>{const a3=A2_TO_A3[cc];if(a3)byA3[a3]=cnt});
+  const a3toA2={};
+  sorted.forEach(([cc,cnt])=>{const a3=A2_TO_A3[cc];if(a3){byA3[a3]=cnt;a3toA2[a3]=cc}});
 
-  // ── Color scale (continuous orange gradient) ──
-  const colorScale=d3.scaleSequential()
+  // ── Color scale ──
+  const colorScale=d3.scalePow().exponent(0.5)
     .domain([0,maxCount||1])
-    .interpolator(t=>d3.interpolateRgb('#1a1a28','#f97316')(Math.pow(t,0.55)));
+    .range(['#1a1a28','#f97316']);
 
   // ── Legend ──
   const legendEl=document.getElementById('map-legend');
   const grad='linear-gradient(to right,#1a1a28,rgba(249,115,22,.3),rgba(249,115,22,.65),#f97316)';
   legendEl.innerHTML=`
-    <span style="font-size:12px;color:var(--text2)">Celkom: <strong style="color:var(--text)">${totalMapped}</strong></span>
-    <div class="map-legend-bar">
-      <span>0</span>
-      <div class="map-legend-gradient" style="background:${grad}"></div>
-      <span>${maxCount}</span>
-    </div>`;
+    <span style="font-size:11px;color:var(--text2)"><strong style="color:var(--text)">${totalMapped}</strong> users</span>
+    <div class="map-legend-bar"><span>0</span><div class="map-legend-gradient" style="background:${grad}"></div><span>${maxCount}</span></div>`;
 
-  // ── Load TopoJSON (cache after first fetch) ──
+  // ── Load TopoJSON (cache) ──
   const mapEl=document.getElementById('geo-map');
   if(!_worldGeo){
     try{
-      mapEl.innerHTML='<div style="padding:40px;text-align:center;color:var(--text2)">Načítavam mapu…</div>';
+      mapEl.innerHTML='<div style="padding:60px;text-align:center;color:var(--text2)">Načítavam mapu…</div>';
       const resp=await fetch('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json');
       const world=await resp.json();
       _worldGeo=topojson.feature(world,world.objects.countries);
-      // Attach alpha-3 ids from Natural Earth numeric→alpha3
-      const numToA3={"004":"AFG","008":"ALB","012":"DZA","020":"AND","024":"AGO","028":"ATG","032":"ARG","051":"ARM","036":"AUS","040":"AUT","031":"AZE","044":"BHS","048":"BHR","050":"BGD","052":"BRB","112":"BLR","056":"BEL","084":"BLZ","204":"BEN","064":"BTN","068":"BOL","070":"BIH","072":"BWA","076":"BRA","096":"BRN","100":"BGR","854":"BFA","108":"BDI","116":"KHM","120":"CMR","124":"CAN","132":"CPV","140":"CAF","148":"TCD","152":"CHL","156":"CHN","170":"COL","174":"COM","178":"COG","180":"COD","188":"CRI","384":"CIV","191":"HRV","192":"CUB","196":"CYP","203":"CZE","208":"DNK","262":"DJI","212":"DMA","214":"DOM","218":"ECU","818":"EGY","222":"SLV","226":"GNQ","232":"ERI","233":"EST","748":"SWZ","231":"ETH","242":"FJI","246":"FIN","250":"FRA","266":"GAB","270":"GMB","268":"GEO","276":"DEU","288":"GHA","300":"GRC","308":"GRD","320":"GTM","324":"GIN","624":"GNB","328":"GUY","332":"HTI","340":"HND","348":"HUN","352":"ISL","356":"IND","360":"IDN","364":"IRN","368":"IRQ","372":"IRL","376":"ISR","380":"ITA","388":"JAM","392":"JPN","400":"JOR","398":"KAZ","404":"KEN","296":"KIR","408":"PRK","410":"KOR","414":"KWT","417":"KGZ","418":"LAO","428":"LVA","422":"LBN","426":"LSO","430":"LBR","434":"LBY","438":"LIE","440":"LTU","442":"LUX","807":"MKD","450":"MDG","454":"MWI","458":"MYS","462":"MDV","466":"MLI","470":"MLT","584":"MHL","478":"MRT","480":"MUS","484":"MEX","583":"FSM","498":"MDA","492":"MCO","496":"MNG","499":"MNE","504":"MAR","508":"MOZ","104":"MMR","516":"NAM","520":"NRU","524":"NPL","528":"NLD","554":"NZL","558":"NIC","562":"NER","566":"NGA","578":"NOR","512":"OMN","586":"PAK","591":"PAN","598":"PNG","600":"PRY","604":"PER","608":"PHL","616":"POL","620":"PRT","634":"QAT","642":"ROU","643":"RUS","646":"RWA","659":"KNA","662":"LCA","670":"VCT","882":"WSM","674":"SMR","678":"STP","682":"SAU","686":"SEN","688":"SRB","690":"SYC","694":"SLE","702":"SGP","703":"SVK","705":"SVN","090":"SLB","706":"SOM","710":"ZAF","728":"SSD","724":"ESP","144":"LKA","736":"SDN","740":"SUR","752":"SWE","756":"CHE","760":"SYR","762":"TJK","834":"TZA","764":"THA","626":"TLS","768":"TGO","776":"TON","780":"TTO","788":"TUN","792":"TUR","795":"TKM","798":"TUV","800":"UGA","804":"UKR","784":"ARE","826":"GBR","840":"USA","858":"URY","860":"UZB","548":"VUT","862":"VEN","704":"VNM","887":"YEM","894":"ZMB","716":"ZWE","-99":"CYN","010":"ATA"};
-      _worldGeo.features.forEach(f=>{
-        f.properties._a3=numToA3[String(f.id)]||'';
-      });
+      _worldGeo.features.forEach(f=>{f.properties._a3=NUM_TO_A3[String(f.id)]||''});
     }catch(e){
-      mapEl.innerHTML='<div style="padding:40px;text-align:center;color:var(--red)">Mapa sa nepodarila načítať</div>';
+      mapEl.innerHTML='<div style="padding:60px;text-align:center;color:var(--red)">Chyba načítania mapy</div>';
       return;
     }
   }
 
-  // ── Setup dimensions ──
+  // ── SVG setup ──
   const W=mapEl.clientWidth||800;
-  const H=Math.min(420,W*0.52);
+  const H=400;
   mapEl.innerHTML='';
 
   const svg=d3.select(mapEl).append('svg')
-    .attr('viewBox',`0 0 ${W} ${H}`)
-    .attr('preserveAspectRatio','xMidYMid meet')
-    .style('width','100%').style('height','auto');
+    .attr('width',W).attr('height',H)
+    .style('background','var(--bg)');
 
-  // ── Projection (Natural Earth, centered on Europe a bit) ──
+  const g=svg.append('g');
+
+  // ── Projection ──
   const projection=d3.geoNaturalEarth1()
-    .fitSize([W-20,H-10],_worldGeo)
-    .translate([W/2,H/2+10]);
-  const path=d3.geoPath(projection);
+    .fitSize([W-20,H-20],_worldGeo)
+    .translate([W/2,H/2]);
+  const pathGen=d3.geoPath(projection);
 
-  // ── Tooltip ref ──
+  // ── Zoom behavior ──
+  const zoom=d3.zoom()
+    .scaleExtent([1,12])
+    .translateExtent([[-100,-100],[W+100,H+100]])
+    .on('zoom',({transform})=>{g.attr('transform',transform)});
+  svg.call(zoom);
+
+  // ── Zoom controls ──
+  document.getElementById('map-zoom-in').onclick=()=>svg.transition().duration(300).call(zoom.scaleBy,1.5);
+  document.getElementById('map-zoom-out').onclick=()=>svg.transition().duration(300).call(zoom.scaleBy,0.67);
+  document.getElementById('map-zoom-reset').onclick=()=>svg.transition().duration(500).call(zoom.transform,d3.zoomIdentity);
+
+  // ── Region buttons ──
+  let selectedA3=null;
+  const regionBtns=document.querySelectorAll('.map-rbtn');
+  regionBtns.forEach(btn=>{
+    btn.onclick=()=>{
+      regionBtns.forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      const region=btn.dataset.region;
+      if(region==='europe'){
+        // Zoom to Europe
+        const euFeatures={type:'FeatureCollection',features:_worldGeo.features.filter(f=>EU_CODES.has(f.properties._a3))};
+        if(euFeatures.features.length){
+          const [[x0,y0],[x1,y1]]=pathGen.bounds(euFeatures);
+          const dx=x1-x0,dy=y1-y0;
+          const x=(x0+x1)/2,y=(y0+y1)/2;
+          const scale=Math.min(8,0.85/Math.max(dx/W,dy/H));
+          const translate=[W/2-scale*x,H/2-scale*y];
+          svg.transition().duration(700).call(zoom.transform,d3.zoomIdentity.translate(translate[0],translate[1]).scale(scale));
+        }
+      }else{
+        svg.transition().duration(700).call(zoom.transform,d3.zoomIdentity);
+      }
+    };
+  });
+
+  // ── Tooltip ──
   const tooltip=d3.select('#geo-map-tooltip');
 
+  function showTooltip(ev,a3,cnt){
+    const code=a3toA2[a3]||'';
+    const name=COUNTRY_NAME[code]||a3||'Neznáma';
+    const flag=code?COUNTRY_FLAG(code):'🌐';
+    const pct=totalMapped>0&&cnt?((cnt/totalMapped)*100).toFixed(1):'0';
+    const barW=cnt?(cnt/maxCount*100):0;
+    tooltip.style('display','block').html(`
+      <div class="tt-country">${flag} ${name}</div>
+      ${cnt?`<div><span class="tt-val">${cnt}</span> používateľov <span class="tt-pct">(${pct}%)</span></div>
+             <div class="tt-bar"><div class="fill" style="width:${barW}%"></div></div>`
+           :'<div style="color:var(--text3)">Žiadni používatelia</div>'}
+    `);
+  }
+
+  // ── Click-to-zoom on country ──
+  function zoomToFeature(f){
+    const [[x0,y0],[x1,y1]]=pathGen.bounds(f);
+    const dx=x1-x0,dy=y1-y0;
+    const x=(x0+x1)/2,y=(y0+y1)/2;
+    const scale=Math.min(8,0.7/Math.max(dx/W,dy/H));
+    const translate=[W/2-scale*x,H/2-scale*y];
+    svg.transition().duration(600).call(zoom.transform,d3.zoomIdentity.translate(translate[0],translate[1]).scale(scale));
+  }
+
   // ── Draw countries ──
-  svg.selectAll('path.country')
+  const paths=g.selectAll('path.country')
     .data(_worldGeo.features)
     .join('path')
     .attr('class',f=>{const a3=f.properties._a3;return'country'+(byA3[a3]?' has-data':'')})
-    .attr('d',path)
-    .attr('fill',f=>{
-      const a3=f.properties._a3;
-      const cnt=byA3[a3];
-      return cnt?colorScale(cnt):'#1a1a28';
-    })
+    .attr('d',pathGen)
+    .attr('fill',f=>{const cnt=byA3[f.properties._a3];return cnt?colorScale(cnt):'#1a1a28'})
     .attr('stroke','#2a2a3e')
     .attr('stroke-width',.4)
     .on('mouseenter',function(ev,f){
       const a3=f.properties._a3;
-      const cnt=byA3[a3];
-      // Reverse lookup alpha3 → alpha2
-      const cc=Object.entries(A2_TO_A3).find(([,v])=>v===a3);
-      const code=cc?cc[0]:a3;
-      const name=COUNTRY_NAME[code]||f.properties.name||a3||'Neznáma';
-      const flag=code&&code.length===2?COUNTRY_FLAG(code):'🌐';
-      const pct=totalMapped>0&&cnt?((cnt/totalMapped)*100).toFixed(1):'0';
-      tooltip.style('display','block').html(`
-        <div class="tt-country">${flag} ${name}</div>
-        ${cnt?`<div><span class="tt-val">${cnt}</span> používateľov <span class="tt-pct">(${pct}%)</span></div>`
-             :'<div style="color:var(--text3)">Žiadni používatelia</div>'}
-      `);
+      showTooltip(ev,a3,byA3[a3]);
       d3.select(this).attr('stroke','#f97316').attr('stroke-width',1.4).raise();
     })
     .on('mousemove',function(ev){
       tooltip.style('left',(ev.clientX+14)+'px').style('top',(ev.clientY-10)+'px');
     })
-    .on('mouseleave',function(){
+    .on('mouseleave',function(ev,f){
       tooltip.style('display','none');
-      d3.select(this).attr('stroke','#2a2a3e').attr('stroke-width',.4);
+      const isSelected=selectedA3===f.properties._a3;
+      d3.select(this).attr('stroke',isSelected?'#f97316':'#2a2a3e').attr('stroke-width',isSelected?2:.4);
+    })
+    .on('click',function(ev,f){
+      const a3=f.properties._a3;
+      // Deselect if already selected
+      if(selectedA3===a3){
+        selectedA3=null;
+        paths.classed('selected',false);
+        svg.transition().duration(500).call(zoom.transform,d3.zoomIdentity);
+        highlightSidebar(null);
+        return;
+      }
+      selectedA3=a3;
+      paths.classed('selected',false);
+      d3.select(this).classed('selected',true);
+      zoomToFeature(f);
+      highlightSidebar(a3);
     });
 
-  // ── Country detail grid below map ──
-  const statsEl=document.getElementById('map-stats-grid');
-  statsEl.innerHTML=sorted.map(([cc,count])=>{
-    const pct=totalMapped>0?(count/totalMapped*100).toFixed(1):'0';
+  // ── Sidebar: Top countries ──
+  function highlightSidebar(a3){
+    document.querySelectorAll('.map-sb-item').forEach(el=>{
+      el.classList.toggle('active',el.dataset.a3===a3);
+    });
+  }
+
+  const listEl=document.getElementById('map-top-list');
+  const top10=sorted.slice(0,15);
+  listEl.innerHTML=top10.map(([cc,count],i)=>{
+    const a3=A2_TO_A3[cc]||'';
     const flag=COUNTRY_FLAG(cc);
     const name=COUNTRY_NAME[cc]||cc;
+    const pct=totalMapped>0?(count/totalMapped*100).toFixed(1):'0';
     const barW=Math.max(4,(count/maxCount)*100);
-    return`<div class="map-stat-row">
-      <span class="ms-flag">${flag}</span>
-      <span class="ms-name">${name}</span>
-      <div class="ms-bar"><div class="fill" style="width:${barW}%;background:var(--orange)"></div></div>
-      <span class="ms-count">${count}</span>
-      <span style="color:var(--text2);font-size:12px;min-width:40px;text-align:right">${pct}%</span>
-    </div>`;
-  }).join('')||'<div class="empty">Žiadne locale dáta</div>';
+    return`<div class="map-sb-item" data-a3="${a3}" data-cc="${cc}">
+      <span class="map-sb-rank">${i+1}</span>
+      <span class="map-sb-flag">${flag}</span>
+      <div class="map-sb-info">
+        <div class="map-sb-name">${name}</div>
+        <div class="map-sb-sub">${pct}% · ${count} user${count!==1?'s':''}</div>
+      </div>
+      <span class="map-sb-val">${count}</span>
+    </div>
+    <div class="map-sb-bar"><div class="fill" style="width:${barW}%"></div></div>`;
+  }).join('');
+
+  // Sidebar click → zoom to country on map
+  listEl.querySelectorAll('.map-sb-item').forEach(el=>{
+    el.addEventListener('click',()=>{
+      const a3=el.dataset.a3;
+      if(!a3)return;
+      const feature=_worldGeo.features.find(f=>f.properties._a3===a3);
+      if(!feature)return;
+      if(selectedA3===a3){
+        selectedA3=null;
+        paths.classed('selected',false);
+        svg.transition().duration(500).call(zoom.transform,d3.zoomIdentity);
+        highlightSidebar(null);
+      }else{
+        selectedA3=a3;
+        paths.classed('selected',false);
+        paths.filter(f=>f.properties._a3===a3).classed('selected',true);
+        zoomToFeature(feature);
+        highlightSidebar(a3);
+      }
+    });
+  });
 }
 
 function renderCohorts(withDate){
