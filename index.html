@@ -1,0 +1,1351 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Subten Admin Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+<script src="https://cdn.jsdelivr.net/npm/topojson-client@3"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+--bg:#0a0a0f;--card:#12121a;--card2:#1a1a28;--border:#1e1e2e;--border2:#2a2a3e;
+--text:#e4e4e7;--text2:#9393a0;--text3:#5e5e72;
+--orange:#f97316;--green:#22c55e;--red:#ef4444;--blue:#3b82f6;--purple:#a855f7;
+--yellow:#eab308;--cyan:#06b6d4;--pink:#ec4899;
+--radius:14px;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;-webkit-font-smoothing:antialiased}
+a{color:var(--orange)}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+
+/* LOGIN */
+#login-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}
+.login-box{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:40px;width:100%;max-width:400px;text-align:center}
+.login-box h1{font-size:24px;margin-bottom:8px}
+.login-box p{color:var(--text2);margin-bottom:24px;font-size:14px}
+.login-box input{width:100%;padding:12px 16px;border-radius:10px;border:1px solid var(--border);background:var(--card2);color:var(--text);font-size:14px;margin-bottom:12px;outline:none}
+.login-box input:focus{border-color:var(--orange)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 20px;border-radius:10px;border:none;cursor:pointer;font-size:14px;font-weight:600;transition:all .2s}
+.btn-google{width:100%;background:#fff;color:#333;margin-bottom:16px}
+.btn-google:hover{background:#f0f0f0}
+.btn-email{width:100%;background:var(--orange);color:#fff}
+.btn-email:hover{opacity:.9}
+.divider{display:flex;align-items:center;gap:12px;margin-bottom:16px;color:var(--text2);font-size:13px}
+.divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--border)}
+.login-error{color:var(--red);font-size:13px;margin-bottom:12px;display:none}
+
+/* DASHBOARD */
+#dashboard{display:none;padding:20px;max-width:1440px;margin:0 auto}
+
+/* HEADER */
+.header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px}
+.header-left{display:flex;align-items:center;gap:16px}
+.header h1{font-size:22px;font-weight:700;white-space:nowrap}
+.header-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.header-right .ts{font-size:12px;color:var(--text2)}
+.btn-sm{padding:8px 16px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:13px;font-weight:600;cursor:pointer;transition:all .2s}
+.btn-sm:hover{border-color:var(--orange);color:var(--orange)}
+.btn-sm.primary{background:var(--orange);color:#fff;border-color:var(--orange)}
+.btn-sm.primary:hover{opacity:.85}
+.btn-sm.danger{color:var(--red);border-color:transparent;background:transparent}
+
+/* SEARCH */
+.search-wrap{position:relative;min-width:220px;flex:1;max-width:380px}
+.search-wrap input{width:100%;padding:9px 14px 9px 34px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:13px;outline:none;transition:border .2s}
+.search-wrap input:focus{border-color:var(--orange)}
+.search-wrap .s-icon{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:14px}
+.search-results{position:absolute;top:100%;left:0;right:0;background:var(--card);border:1px solid var(--border2);border-radius:8px;margin-top:4px;max-height:300px;overflow-y:auto;z-index:100;display:none;box-shadow:0 12px 32px rgba(0,0,0,.5)}
+.search-results.show{display:block}
+.sr-item{padding:10px 14px;font-size:13px;cursor:pointer;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+.sr-item:hover{background:var(--card2)}
+.sr-item:last-child{border-bottom:none}
+.sr-tag{font-size:10px;padding:2px 7px;border-radius:4px;font-weight:600}
+
+/* ALERTS */
+.alerts-strip{margin-bottom:14px}
+.alert{display:flex;align-items:center;gap:10px;padding:10px 16px;border-radius:8px;margin-bottom:6px;font-size:13px;font-weight:500;border:1px solid}
+.alert-warn{background:rgba(234,179,8,.06);border-color:rgba(234,179,8,.18);color:var(--yellow)}
+.alert-crit{background:rgba(239,68,68,.06);border-color:rgba(239,68,68,.18);color:var(--red)}
+.alert-ok{background:rgba(34,197,94,.06);border-color:rgba(34,197,94,.18);color:var(--green)}
+.alert-info{background:rgba(59,130,246,.06);border-color:rgba(59,130,246,.18);color:var(--blue)}
+.alert-dismiss{margin-left:auto;cursor:pointer;opacity:.5;font-size:16px}
+.alert-dismiss:hover{opacity:1}
+
+/* TAB NAV */
+.tab-nav{display:flex;gap:4px;margin-bottom:16px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:5px}
+.tab-btn{padding:9px 22px;border-radius:10px;border:none;background:transparent;color:var(--text2);font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:6px}
+.tab-btn:hover{color:var(--text);background:var(--card2)}
+.tab-btn.active{background:var(--orange);color:#fff}
+.tab-page{display:none}
+.tab-page.active{display:block}
+
+/* PERIOD FILTER */
+.filter-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;align-items:center}
+.period-bar{display:flex;gap:4px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:5px}
+.period-btn{padding:8px 18px;border-radius:8px;border:none;background:transparent;color:var(--text2);font-size:13px;font-weight:600;cursor:pointer;transition:all .2s}
+.period-btn:hover{color:var(--text);background:var(--card2)}
+.period-btn.active{background:var(--orange);color:#fff}
+.promo-filter select{padding:8px 14px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:13px;outline:none;cursor:pointer}
+.promo-filter select:focus{border-color:var(--orange)}
+
+/* KPI CARDS */
+.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin-bottom:20px}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;width:4px;height:100%;border-radius:4px 0 0 4px}
+.kpi.orange::before{background:var(--orange)}.kpi.red::before{background:var(--red)}
+.kpi.green::before{background:var(--green)}.kpi.blue::before{background:var(--blue)}
+.kpi.purple::before{background:var(--purple)}.kpi.yellow::before{background:var(--yellow)}
+.kpi.cyan::before{background:var(--cyan)}
+.kpi-label{font-size:12px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.kpi-value{font-size:26px;font-weight:700}
+.kpi-sub{font-size:12px;color:var(--text2);margin-top:4px}
+.kpi-trend{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:600;padding:2px 7px;border-radius:4px;margin-top:5px}
+.kpi-trend.up{color:var(--green);background:rgba(34,197,94,.1)}
+.kpi-trend.down{color:var(--red);background:rgba(239,68,68,.1)}
+.kpi-trend.flat{color:var(--text3);background:rgba(94,94,114,.15)}
+
+/* CREDIT CARDS */
+.credit-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-bottom:20px}
+.credit-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px}
+.credit-card h3{font-size:14px;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.credit-card h3 .dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+.credit-vals{display:flex;justify-content:space-between;font-size:13px;color:var(--text2);margin-bottom:8px}
+.credit-vals span:first-child{font-size:20px;font-weight:700;color:var(--text)}
+.progress-bar{height:8px;border-radius:4px;background:var(--card2);overflow:hidden;margin-top:6px}
+.progress-bar .fill{height:100%;border-radius:4px;transition:width .4s}
+.unavailable{color:var(--text2);font-size:14px;font-style:italic;padding:10px 0}
+
+/* CHARTS */
+.charts-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:14px;margin-bottom:20px}
+.chart-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px}
+.chart-card h3{font-size:14px;margin-bottom:14px;color:var(--text2)}
+.chart-card canvas{width:100%!important;max-height:280px}
+
+/* PROMO CARDS */
+.promo-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px;margin-bottom:20px}
+.promo-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px;text-align:center;position:relative}
+.promo-card .code{font-size:17px;font-weight:700;font-family:'SF Mono',Menlo,monospace;letter-spacing:1px;margin-bottom:4px}
+.promo-card .meta{font-size:11px;color:var(--text2);margin-bottom:10px}
+.promo-card .stats{display:flex;justify-content:space-around;margin-top:10px;font-size:12px;color:var(--text2)}
+.promo-card .stats .n{font-weight:700;font-size:17px;display:block;color:var(--text)}
+.promo-status{position:absolute;top:12px;right:12px;width:8px;height:8px;border-radius:50%}
+
+/* ENGAGEMENT */
+.engage-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:20px}
+.engage-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px;text-align:center}
+.engage-card .val{font-size:28px;font-weight:700;margin:8px 0 4px}
+.engage-card .lbl{font-size:12px;color:var(--text2)}
+
+/* TABLES */
+.table-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:20px;overflow-x:auto}
+.table-card h3{font-size:14px;margin-bottom:14px;color:var(--text2)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;padding:10px 12px;border-bottom:1px solid var(--border);color:var(--text2);font-weight:600;white-space:nowrap}
+td{padding:10px 12px;border-bottom:1px solid #1a1a25;white-space:nowrap}
+tr:hover td{background:var(--card2)}
+.badge{display:inline-block;padding:3px 10px;border-radius:6px;font-size:11px;font-weight:600}
+.badge-trial{background:#f9731620;color:var(--orange)}
+.badge-premium{background:#22c55e20;color:var(--green)}
+.badge-byok{background:#3b82f620;color:var(--blue)}
+.badge-promo{background:#a855f720;color:var(--purple)}
+.badge-active{background:#22c55e20;color:var(--green)}
+.badge-inactive{background:#ef444420;color:var(--red)}
+.badge-expired{background:#5e5e7220;color:var(--text3)}
+.locale-chips{display:flex;gap:8px;flex-wrap:wrap}
+.locale-chip{background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:6px 14px;font-size:13px}
+.locale-chip strong{color:var(--orange)}
+.section-title{font-size:16px;font-weight:700;margin:28px 0 14px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+.empty{text-align:center;padding:24px;color:var(--text3);font-size:13px}
+
+/* LOADING */
+.loading{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px 20px;gap:16px}
+.spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--orange);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+@media(max-width:768px){
+  .header{flex-direction:column;align-items:flex-start}
+  .search-wrap{max-width:100%;width:100%}
+  .kpi-row{grid-template-columns:repeat(2,1fr)}
+  .charts-grid{grid-template-columns:1fr}
+  .filter-row{flex-direction:column}
+  .tab-nav{overflow-x:auto}
+}
+@media(max-width:480px){.kpi-row{grid-template-columns:1fr}}
+
+/* USER DETAIL CARD */
+.user-detail{display:none;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin-bottom:20px;position:relative}
+.user-detail.show{display:block}
+.user-detail .ud-close{position:absolute;top:14px;right:18px;cursor:pointer;color:var(--text3);font-size:18px;transition:color .2s}
+.user-detail .ud-close:hover{color:var(--text)}
+.ud-header{display:flex;align-items:center;gap:16px;margin-bottom:20px;flex-wrap:wrap}
+.ud-avatar{width:52px;height:52px;border-radius:50%;background:var(--orange);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;color:#fff;flex-shrink:0}
+.ud-name{font-size:20px;font-weight:700}
+.ud-id{font-size:11px;color:var(--text3);font-family:'SF Mono',Menlo,monospace;word-break:break-all}
+.ud-badges{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+.ud-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:20px}
+.ud-stat{background:var(--card2);border-radius:10px;padding:14px 16px}
+.ud-stat .label{font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+.ud-stat .value{font-size:20px;font-weight:700}
+.ud-stat .sub{font-size:11px;color:var(--text3);margin-top:2px}
+.ud-section{margin-top:18px}
+.ud-section h4{font-size:13px;color:var(--text2);margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px}
+.ud-bar-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;font-size:13px}
+.ud-bar-row .bar-label{min-width:100px;color:var(--text2);text-align:right;flex-shrink:0}
+.ud-bar-row .bar-wrap{flex:1;height:8px;background:var(--card);border-radius:4px;overflow:hidden}
+.ud-bar-row .bar-fill{height:100%;border-radius:4px;transition:width .3s}
+.ud-bar-row .bar-val{min-width:70px;font-weight:600}
+.ud-meta-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px}
+.ud-meta-item{font-size:13px;padding:8px 12px;background:var(--card2);border-radius:8px}
+.ud-meta-item .mk{color:var(--text3);font-size:11px;display:block;margin-bottom:2px}
+
+/* FUNNEL */
+.funnel{display:flex;flex-direction:column;gap:6px;padding:10px 0}
+.funnel-step{display:flex;align-items:center;gap:12px}
+.funnel-bar{height:36px;border-radius:8px;display:flex;align-items:center;padding:0 14px;font-size:13px;font-weight:600;color:#fff;transition:width .4s;min-width:50px}
+.funnel-label{min-width:90px;font-size:12px;color:var(--text2);text-align:right;flex-shrink:0}
+.funnel-val{font-size:12px;color:var(--text2);margin-left:8px;white-space:nowrap}
+.funnel-arrow{text-align:center;color:var(--text3);font-size:11px;padding-left:102px}
+
+/* COHORT TABLE */
+.cohort-table{font-size:12px;width:100%}
+.cohort-table th,.cohort-table td{padding:8px 10px;text-align:center;border-bottom:1px solid var(--border)}
+.cohort-table th{color:var(--text2);font-weight:600}
+.cohort-cell{border-radius:4px;padding:6px 8px}
+
+/* GEO MAP */
+.map-container{position:relative;width:100%;overflow:hidden;border-radius:10px;background:var(--bg)}
+.map-container svg{display:block;width:100%}
+.map-container path.country{fill:var(--card2);stroke:var(--border);stroke-width:.4;transition:fill .25s,stroke .2s;cursor:default}
+.map-container path.country:hover{stroke:var(--text);stroke-width:.8}
+.map-container path.country.has-data{cursor:pointer}
+.map-tooltip{position:fixed;background:var(--card);border:1px solid var(--border2);border-radius:10px;padding:10px 16px;font-size:13px;pointer-events:none;z-index:200;box-shadow:0 12px 36px rgba(0,0,0,.5);display:none;max-width:220px}
+.map-tooltip .tt-country{font-weight:700;font-size:15px;margin-bottom:3px;display:flex;align-items:center;gap:8px}
+.map-tooltip .tt-val{color:var(--orange);font-weight:700}
+.map-tooltip .tt-pct{color:var(--text2);font-size:12px}
+.map-legend-bar{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--text2)}
+.map-legend-gradient{width:120px;height:8px;border-radius:4px}
+.map-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-top:16px}
+.map-stat-row{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--card2);border-radius:10px;font-size:13px}
+.map-stat-row .ms-flag{font-size:22px;flex-shrink:0}
+.map-stat-row .ms-name{font-weight:600;flex:1}
+.map-stat-row .ms-count{font-weight:700;color:var(--orange);font-size:16px}
+.map-stat-row .ms-bar{width:60px;height:6px;background:var(--card);border-radius:3px;overflow:hidden}
+.map-stat-row .ms-bar .fill{height:100%;border-radius:3px}
+</style>
+</head>
+<body>
+
+<!-- LOGIN SCREEN -->
+<div id="login-screen">
+  <div class="login-box">
+    <h1>Subten Admin</h1>
+    <p>Prihláste sa pre prístup k dashboardu</p>
+    <button class="btn btn-google" onclick="loginGoogle()">
+      <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+      Prihlasiť sa cez Google
+    </button>
+    <div class="divider">alebo</div>
+    <div class="login-error" id="login-error"></div>
+    <input type="email" id="login-email" placeholder="Email">
+    <input type="password" id="login-password" placeholder="Heslo">
+    <button class="btn btn-email" onclick="loginEmail()">Prihlasiť sa emailom</button>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashboard">
+  <div class="loading" id="loading">
+    <div class="spinner"></div>
+    <span style="color:var(--text2);font-size:14px">Načítavam dáta...</span>
+  </div>
+  <div id="dash-content" style="display:none">
+
+    <!-- HEADER -->
+    <div class="header">
+      <div class="header-left">
+        <h1>Subten Admin</h1>
+        <div class="search-wrap">
+          <span class="s-icon">🔍</span>
+          <input type="text" id="global-search" placeholder="Hľadať..." oninput="onSearch(this.value)" onfocus="onSearch(this.value)" onblur="setTimeout(()=>document.getElementById('search-results').classList.remove('show'),200)">
+          <div class="search-results" id="search-results"></div>
+        </div>
+      </div>
+      <div class="header-right">
+        <span class="ts" id="last-updated"></span>
+        <button class="btn-sm" onclick="exportCSV()">📥 Export</button>
+        <button class="btn-sm primary" onclick="refresh()">Obnoviť</button>
+        <button class="btn-sm danger" onclick="logout()">Odhlásiť</button>
+      </div>
+    </div>
+
+    <!-- ALERTS -->
+    <div class="alerts-strip" id="alerts-strip"></div>
+
+    <!-- TAB NAVIGATION -->
+    <div class="tab-nav">
+      <button class="tab-btn active" onclick="switchTab('overview')">📊 Prehľad</button>
+      <button class="tab-btn" onclick="switchTab('growth')">📈 Rast & Kampane</button>
+      <button class="tab-btn" onclick="switchTab('promo')">🎟️ Promo & Marketing</button>
+    </div>
+
+    <!-- ═══════════════════════════════════ -->
+    <!-- PAGE 1: PREHĽAD (existing)         -->
+    <!-- ═══════════════════════════════════ -->
+    <div class="tab-page active" id="page-overview">
+
+      <!-- FILTERS -->
+      <div class="filter-row">
+        <div class="period-bar" id="period-bar">
+          <button class="period-btn" data-days="0">Dnes</button>
+          <button class="period-btn" data-days="7">7 dní</button>
+          <button class="period-btn" data-days="30">30 dní</button>
+          <button class="period-btn" data-days="90">90 dní</button>
+          <button class="period-btn" data-days="365">Rok</button>
+          <button class="period-btn active" data-days="all">Všetko</button>
+        </div>
+        <div class="promo-filter">
+          <select id="user-filter-select" onchange="onUserFilter(this.value)">
+            <option value="all">👤 Všetci používatelia</option>
+          </select>
+        </div>
+        <button class="btn-sm" id="user-filter-clear" style="display:none" onclick="onUserFilter('all');document.getElementById('user-filter-select').value='all'">✕ Zrušiť filter</button>
+      </div>
+
+      <div class="kpi-row" id="kpi-row"></div>
+      <div class="user-detail" id="user-detail"></div>
+      <div class="credit-row" id="credit-row"></div>
+
+      <div class="charts-grid">
+        <div class="chart-card"><h3>Denný trend — Náklady (USD)</h3><canvas id="chart-daily-cost"></canvas></div>
+        <div class="chart-card"><h3>Denný trend — Requesty</h3><canvas id="chart-daily-req"></canvas></div>
+        <div class="chart-card"><h3>Náklady podľa modelu</h3><canvas id="chart-model"></canvas></div>
+        <div class="chart-card"><h3>Requesty podľa tasku</h3><canvas id="chart-task"></canvas></div>
+      </div>
+
+      <div class="chart-card" style="margin-bottom:20px"><h3>🔮 Predikcia nákladov (30 dní)</h3><canvas id="chart-predict"></canvas></div>
+      <div class="chart-card" style="margin-bottom:20px"><h3>📊 Pareto — Top API spotrebitelia</h3><canvas id="chart-pareto"></canvas></div>
+
+      <div class="section-title">Aktivita používateľov</div>
+      <div class="engage-row" id="engage-row"></div>
+
+      <!-- GEO MAP (Power BI style) -->
+      <div class="section-title">🌍 Mapa používateľov</div>
+      <div class="chart-card" style="margin-bottom:20px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+          <h3 style="margin:0">Geografické rozloženie podľa lokalizácie</h3>
+          <div id="map-legend" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap"></div>
+        </div>
+        <div id="geo-map" class="map-container"></div>
+        <div id="geo-map-tooltip" class="map-tooltip"></div>
+        <div id="map-stats-grid" class="map-stats"></div>
+      </div>
+
+      <div class="section-title">Modely</div>
+      <div class="table-card"><table id="tbl-models"><thead><tr><th>Model</th><th>Requesty</th><th>Prompt</th><th>Completion</th><th>Náklady</th></tr></thead><tbody></tbody></table></div>
+
+      <div class="section-title">Tasky</div>
+      <div class="table-card"><table id="tbl-tasks"><thead><tr><th>Task</th><th>Requesty</th><th>Prompt</th><th>Completion</th><th>Náklady</th></tr></thead><tbody></tbody></table></div>
+
+      <div class="section-title">Používatelia</div>
+      <div class="table-card"><table id="tbl-users"><thead><tr><th>Meno/ID</th><th>Zariadenie</th><th>OS</th><th>App</th><th>Lokál</th><th>Plán</th><th>Promo</th><th>Requesty</th><th>Náklady</th><th>Posledná aktivita</th></tr></thead><tbody></tbody></table></div>
+
+      <div class="section-title">Lokalizácia</div>
+      <div class="table-card"><div class="locale-chips" id="locale-chips"></div></div>
+
+      <div class="section-title">Cenník modelov</div>
+      <div class="table-card"><table id="tbl-pricing"><thead><tr><th>Model</th><th>Prompt / 1M</th><th>Completion / 1M</th></tr></thead><tbody></tbody></table></div>
+    </div>
+
+    <!-- ═══════════════════════════════════ -->
+    <!-- PAGE 2: RAST & KAMPANE             -->
+    <!-- ═══════════════════════════════════ -->
+    <div class="tab-page" id="page-growth">
+
+      <!-- GROWTH KPIs -->
+      <div class="kpi-row" id="kpi-growth-row"></div>
+
+      <!-- REGISTRATION TIMELINE -->
+      <div class="charts-grid">
+        <div class="chart-card"><h3>📈 Noví používatelia — denný trend</h3><canvas id="chart-reg-daily"></canvas></div>
+        <div class="chart-card"><h3>👥 Kumulatívny rast</h3><canvas id="chart-reg-cumul"></canvas></div>
+      </div>
+
+      <!-- PLAN DISTRIBUTION + CONVERSION FUNNEL -->
+      <div class="charts-grid">
+        <div class="chart-card"><h3>📊 Rozdelenie plánov</h3><canvas id="chart-plan-dist"></canvas></div>
+        <div class="chart-card"><h3>🔄 Konverzný lievik</h3><div id="funnel-visual"></div></div>
+      </div>
+
+      <!-- RETENTION -->
+      <div class="section-title">🔥 Retencia</div>
+      <div class="kpi-row" id="kpi-retention-row"></div>
+
+      <!-- CAMPAIGN SOURCE -->
+      <div class="section-title">📣 Kampane — zdroj akvizície</div>
+      <div class="table-card"><table id="tbl-campaigns"><thead><tr><th>Zdroj / Kampaň</th><th>Používatelia</th><th>Konverzia na Premium</th><th>Requesty</th><th>Náklady</th><th>Ø Náklady/user</th><th>Retencia 7d</th></tr></thead><tbody></tbody></table></div>
+
+      <!-- WEEKLY COHORTS -->
+      <div class="section-title">📅 Týždenné kohorty</div>
+      <div class="table-card" id="cohort-table-wrap"></div>
+
+      <!-- GROWTH USERS TABLE -->
+      <div class="section-title">🆕 Najnovší používatelia</div>
+      <div class="table-card"><table id="tbl-new-users"><thead><tr><th>Meno/ID</th><th>Zariadenie</th><th>Plán</th><th>Zdroj</th><th>Registrácia</th><th>Posledná aktivita</th><th>Requesty</th><th>Náklady</th></tr></thead><tbody></tbody></table></div>
+    </div>
+
+    <!-- ═══════════════════════════════════ -->
+    <!-- PAGE 3: PROMO & MARKETING          -->
+    <!-- ═══════════════════════════════════ -->
+    <div class="tab-page" id="page-promo">
+
+      <!-- PROMO FILTER -->
+      <div class="filter-row">
+        <div class="promo-filter">
+          <select id="promo-filter-select" onchange="onPromoFilter(this.value)">
+            <option value="all">Všetci používatelia</option>
+            <option value="promo-only">Len z promo kódov</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- PROMO KPIs -->
+      <div class="kpi-row" id="kpi-promo-row"></div>
+
+      <!-- PROMO CODE CARDS -->
+      <div class="section-title">🎟️ Promo kódy</div>
+      <div class="promo-grid" id="promo-grid"></div>
+
+      <!-- PROMO TIMELINE -->
+      <div class="chart-card" style="margin-bottom:20px"><h3>📈 Redemptions — časová os</h3><canvas id="chart-promo-timeline"></canvas></div>
+
+      <!-- PROMO USERS FILTERED -->
+      <div class="section-title">👥 Používatelia z promo kódov</div>
+      <div class="table-card"><table id="tbl-promo-users"><thead><tr><th>Meno/ID</th><th>Zariadenie</th><th>Promo kód</th><th>Plán</th><th>Requesty</th><th>Náklady</th><th>Posledná aktivita</th></tr></thead><tbody></tbody></table></div>
+
+      <!-- PROMO DETAIL TABLE -->
+      <div class="section-title">📋 Promo kódy — detail</div>
+      <div class="table-card"><table id="tbl-promo"><thead><tr><th>Kód</th><th>Typ</th><th>Trvanie</th><th>Použité</th><th>Max</th><th>Využitie</th><th>Poznámka</th><th>Stav</th><th>Vytvorený</th><th>Expirácia</th></tr></thead><tbody></tbody></table></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const SB_URL="https://omfctxrkmfbkmjiwfdbl.supabase.co";
+const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9tZmN0eHJrbWZia21qaXdmZGJsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg5MjM2NDUsImV4cCI6MjA5NDQ5OTY0NX0.zVWZK3y23VvUebhakWDTKW7Hd2-1sD-zue1y2ffajvo";
+const REDIRECT_URL=window.location.origin+window.location.pathname;
+const sb=supabase.createClient(SB_URL,SB_KEY);
+
+let charts={};
+let currentPeriod='all';
+let currentPromoFilter='all';
+let currentUserFilter='all';
+let dashData=null;
+let promoData={codes:[],redemptions:[]};
+
+// ── FORMATTERS ──
+const fmt=n=>{if(n==null)return'0';if(n>=1e6)return(n/1e6).toFixed(1)+'M';if(n>=1e3)return(n/1e3).toFixed(1)+'k';return Number(n).toLocaleString('sk-SK')};
+const fU=n=>n==null?'$0.00':'$'+Number(n).toFixed(4);
+const fE=n=>n==null?'0.00 €':Number(n).toFixed(2)+' €';
+const fPct=n=>Number(n||0).toFixed(1)+'%';
+const shortModel=m=>{const p=(m||'').split('/');return p.length>1?p[1]:m};
+const shortId=id=>(id||'').substring(0,8);
+const fDate=d=>{if(!d)return'—';const dt=new Date(d);return dt.toLocaleDateString('sk-SK')+' '+dt.toLocaleTimeString('sk-SK',{hour:'2-digit',minute:'2-digit'})};
+const fDateShort=d=>{if(!d)return'—';return new Date(d).toLocaleDateString('sk-SK')};
+const daysFromNow=d=>{if(!d)return null;return Math.ceil((new Date(d)-new Date())/(864e5))};
+
+// ── AUTH ──
+async function checkAuth(){
+  if(window.location.hash&&window.location.hash.includes('access_token')){
+    const params=new URLSearchParams(window.location.hash.substring(1));
+    const at=params.get('access_token'),rt=params.get('refresh_token');
+    if(at&&rt){await sb.auth.setSession({access_token:at,refresh_token:rt});window.location.hash=''}
+  }
+  const{data:{session}}=await sb.auth.getSession();
+  if(session){
+    document.getElementById('login-screen').style.display='none';
+    document.getElementById('dashboard').style.display='block';
+    loadAll();
+  }else{
+    document.getElementById('login-screen').style.display='flex';
+    document.getElementById('dashboard').style.display='none';
+  }
+}
+async function loginGoogle(){
+  const{error}=await sb.auth.signInWithOAuth({provider:'google',options:{redirectTo:REDIRECT_URL}});
+  if(error)showLoginError(error.message);
+}
+async function loginEmail(){
+  const e=document.getElementById('login-email').value,p=document.getElementById('login-password').value;
+  if(!e||!p)return showLoginError('Vyplňte email a heslo');
+  const{error}=await sb.auth.signInWithPassword({email:e,password:p});
+  if(error)return showLoginError(error.message);
+  checkAuth();
+}
+function showLoginError(msg){const el=document.getElementById('login-error');el.textContent=msg;el.style.display='block'}
+async function logout(){await sb.auth.signOut();location.reload()}
+
+// ── TAB SWITCHING ──
+function switchTab(name){
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.tab-page').forEach(p=>p.classList.remove('active'));
+  document.querySelector(`[onclick="switchTab('${name}')"]`).classList.add('active');
+  document.getElementById('page-'+name).classList.add('active');
+  // Re-render charts when switching to promo tab (canvas resize fix)
+  if(name==='promo'&&dashData)renderPromoPage();
+  if(name==='growth'&&dashData)renderGrowthPage();
+}
+
+// ── LOAD ALL ──
+async function loadAll(){
+  document.getElementById('loading').style.display='flex';
+  document.getElementById('dash-content').style.display='none';
+  try{
+    const{data:{session}}=await sb.auth.getSession();
+    if(!session)return checkAuth();
+    let url=SB_URL+'/functions/v1/admin-stats';
+    if(currentPeriod!=='all'){
+      const from=new Date();from.setDate(from.getDate()-Number(currentPeriod));
+      url+='?from='+from.toISOString().split('T')[0];
+    }
+    const[statsRes,pcRes,prRes]=await Promise.all([
+      fetch(url,{headers:{'Authorization':'Bearer '+session.access_token,'apikey':SB_KEY}}),
+      sb.from('promo_codes').select('*').order('created_at',{ascending:true}),
+      sb.from('promo_redemptions').select('*').order('redeemed_at',{ascending:true})
+    ]);
+    if(!statsRes.ok)throw new Error('HTTP '+statsRes.status);
+    dashData=await statsRes.json();
+    promoData.codes=pcRes.data||[];
+    promoData.redemptions=prRes.data||[];
+    populatePromoFilter();
+    populateUserFilter();
+    document.getElementById('loading').style.display='none';
+    document.getElementById('dash-content').style.display='block';
+    renderAll();
+  }catch(e){
+    console.error(e);
+    document.getElementById('loading').innerHTML='<span style="color:var(--red)">Chyba: '+e.message+'</span><button class="btn-sm primary" style="margin-top:12px" onclick="loadAll()">Skúsiť znova</button>';
+  }
+}
+function refresh(){loadAll()}
+
+// ── PERIOD FILTER ──
+document.getElementById('period-bar').addEventListener('click',e=>{
+  const btn=e.target.closest('.period-btn');if(!btn)return;
+  document.querySelectorAll('.period-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  currentPeriod=btn.dataset.days;
+  loadAll();
+});
+
+// ── PROMO FILTER ──
+function populatePromoFilter(){
+  const sel=document.getElementById('promo-filter-select');
+  const cur=sel.value;
+  sel.innerHTML='<option value="all">Všetci používatelia</option><option value="promo-only">Len z promo kódov</option>';
+  promoData.codes.forEach(c=>{sel.innerHTML+=`<option value="code:${c.id}">${c.code}</option>`});
+  sel.value=cur;
+}
+function onPromoFilter(v){currentPromoFilter=v;if(dashData)renderPromoPage()}
+function getPromoDeviceMap(){
+  const m=new Map();
+  promoData.redemptions.forEach(r=>{
+    const c=promoData.codes.find(x=>x.id===r.code_id);
+    if(c)m.set(r.device_id,c.code);
+  });
+  return m;
+}
+function getFilteredUsers(){
+  const users=dashData.users||[];
+  const map=getPromoDeviceMap();
+  if(currentPromoFilter==='all')return users;
+  if(currentPromoFilter==='promo-only')return users.filter(u=>map.has(u.id));
+  if(currentPromoFilter.startsWith('code:')){
+    const cid=currentPromoFilter.split(':')[1];
+    const devs=new Set(promoData.redemptions.filter(r=>r.code_id===cid).map(r=>r.device_id));
+    return users.filter(u=>devs.has(u.id));
+  }
+  return users;
+}
+
+// ── USER FILTER ──
+function populateUserFilter(){
+  const sel=document.getElementById('user-filter-select');
+  const cur=sel.value;
+  sel.innerHTML='<option value="all">👤 Všetci používatelia</option>';
+  const users=(dashData?.users||[]).sort((a,b)=>(b.cost||0)-(a.cost||0));
+  users.forEach(u=>{
+    const name=u.display_name||shortId(u.id);
+    const plan=u.plan||'trial';
+    sel.innerHTML+=`<option value="${u.id}">${name} (${plan} · ${fU(u.cost)})</option>`;
+  });
+  sel.value=cur;
+}
+function onUserFilter(v){
+  currentUserFilter=v;
+  document.getElementById('user-filter-clear').style.display=v==='all'?'none':'inline-flex';
+  if(dashData)renderOverviewPage();
+}
+function closeUserDetail(){
+  onUserFilter('all');
+  document.getElementById('user-filter-select').value='all';
+}
+function getOverviewUsers(){
+  const users=dashData?.users||[];
+  if(currentUserFilter==='all')return users;
+  return users.filter(u=>u.id===currentUserFilter);
+}
+
+// ── SEARCH ──
+function onSearch(q){
+  const box=document.getElementById('search-results');
+  if(!q||q.length<2){box.classList.remove('show');return}
+  q=q.toLowerCase();const results=[];
+  (dashData?.users||[]).forEach(u=>{
+    const n=u.display_name||shortId(u.id);
+    if(n.toLowerCase().includes(q)||u.id?.toLowerCase().includes(q)||(u.device_model||'').toLowerCase().includes(q))
+      results.push({label:n,sub:u.device_model||'',tag:'Používateľ',bg:'#3b82f620',fg:'var(--blue)'});
+  });
+  Object.keys(dashData?.byModel||{}).forEach(m=>{
+    if(m.toLowerCase().includes(q))results.push({label:shortModel(m),sub:'',tag:'Model',bg:'#a855f720',fg:'var(--purple)'});
+  });
+  Object.keys(dashData?.byTask||{}).forEach(t=>{
+    if(t.toLowerCase().includes(q))results.push({label:t,sub:'',tag:'Task',bg:'#06b6d420',fg:'var(--cyan)'});
+  });
+  promoData.codes.forEach(c=>{
+    if(c.code.toLowerCase().includes(q)||(c.note||'').toLowerCase().includes(q))
+      results.push({label:c.code,sub:c.note||'',tag:'Promo',bg:'#f9731620',fg:'var(--orange)'});
+  });
+  box.innerHTML=results.length?results.slice(0,10).map(r=>`<div class="sr-item"><div><strong>${r.label}</strong>${r.sub?' — '+r.sub:''}</div><span class="sr-tag" style="background:${r.bg};color:${r.fg}">${r.tag}</span></div>`).join(''):'<div class="sr-item" style="color:var(--text3)">Žiadne výsledky</div>';
+  box.classList.add('show');
+}
+
+// ── RENDER ALL ──
+function renderAll(){
+  renderAlerts();
+  renderOverviewPage();
+  renderGrowthPage();
+  renderPromoPage();
+  document.getElementById('last-updated').textContent='Aktualizované: '+fDate(dashData.generatedAt);
+}
+
+// ══════════════════════════════════════════
+// ALERTS — trend detection
+// ══════════════════════════════════════════
+function renderAlerts(){
+  const d=dashData,alerts=[],daily=d.daily||[];
+  // Cost spike
+  if(daily.length>=7){
+    const avg7=daily.slice(-7).reduce((s,x)=>s+x.cost,0)/7;
+    const last=daily[daily.length-1];
+    if(last&&last.cost>avg7*2.2&&last.cost>0.01)
+      alerts.push({t:'crit',msg:`⚠️ Náklady ${last.date}: ${fU(last.cost)} — ${(last.cost/avg7).toFixed(1)}× nad 7d priemerom`});
+  }
+  // Credit low
+  const bal=d.openRouterBalance;
+  if(bal){const p=bal.credits?(bal.remaining/bal.credits)*100:0;
+    if(p<10)alerts.push({t:'crit',msg:`🔴 Premium kredit pod 10% — zostáva ${fU(bal.remaining)}`});
+    else if(p<25)alerts.push({t:'warn',msg:`🟡 Premium kredit pod 25% — zostáva ${fU(bal.remaining)}`});
+  }
+  // Cost trending up
+  if(daily.length>=14){
+    const f7=daily.slice(-14,-7).reduce((s,x)=>s+x.cost,0)/7;
+    const l7=daily.slice(-7).reduce((s,x)=>s+x.cost,0)/7;
+    if(f7>0&&l7/f7>1.5)alerts.push({t:'warn',msg:`📈 Náklady rastú: ${fU(l7)}/d vs ${fU(f7)}/d (+${fPct((l7/f7-1)*100)})`});
+  }
+  // Promo near expiry
+  promoData.codes.forEach(c=>{
+    if(c.expires_at&&c.is_active){const d=daysFromNow(c.expires_at);if(d!==null&&d<=3&&d>=0)alerts.push({t:'warn',msg:`🎟️ Promo ${c.code} expiruje za ${d} dní`})}
+  });
+  // Promo fully used
+  promoData.codes.forEach(c=>{if(c.is_active&&c.used_count>=c.max_uses)alerts.push({t:'info',msg:`✅ Promo ${c.code} plne využitý (${c.used_count}/${c.max_uses})`})});
+  // All OK
+  if(!alerts.length)alerts.push({t:'ok',msg:'✅ Všetko v poriadku — žiadne varovné trendy'});
+  document.getElementById('alerts-strip').innerHTML=alerts.map(a=>`<div class="alert alert-${a.t}"><span>${a.msg}</span><span class="alert-dismiss" onclick="this.parentElement.remove()">×</span></div>`).join('');
+}
+
+// ══════════════════════════════════════════
+// PAGE 1: OVERVIEW
+// ══════════════════════════════════════════
+function renderOverviewPage(){
+  const d=dashData,t=d.totals||{},r=d.revenue||{},s=d.subscribers||{};
+  const allUsers=d.users||[];
+  const filteredUsers=getOverviewUsers();
+  const isFiltered=currentUserFilter!=='all';
+  const daily=d.daily||[];
+
+  // When a single user is selected, compute their KPIs
+  let kpiReq,kpiCost,kpiCostEUR,kpiUsers,kpiAvg,kpiArpu,kpiPrompt,kpiCompl;
+  let costTrend='flat',reqTrend='flat';
+
+  if(isFiltered&&filteredUsers.length===1){
+    const u=filteredUsers[0];
+    kpiReq=u.requests||0;
+    kpiCost=u.cost||0;
+    kpiCostEUR=kpiCost*0.92;
+    kpiPrompt=u.promptTokens||0;
+    kpiCompl=u.completionTokens||0;
+    kpiUsers=1;
+    kpiAvg=kpiReq?kpiCost/kpiReq:0;
+    kpiArpu=kpiCostEUR;
+  }else{
+    kpiReq=t.requests||0;
+    kpiCost=t.estimatedCostUSD||0;
+    kpiCostEUR=r.aiCostEUR||0;
+    kpiPrompt=t.promptTokens||0;
+    kpiCompl=t.completionTokens||0;
+    kpiUsers=allUsers.length;
+    kpiAvg=kpiReq?kpiCost/kpiReq:0;
+    kpiArpu=kpiUsers>0?((r.monthlyGrossEUR||0)/kpiUsers):0;
+  }
+
+  if(daily.length>=14){
+    const fc=daily.slice(-14,-7).reduce((s,x)=>s+x.cost,0),lc=daily.slice(-7).reduce((s,x)=>s+x.cost,0);
+    costTrend=lc>fc*1.1?'up':lc<fc*.9?'down':'flat';
+    const fr=daily.slice(-14,-7).reduce((s,x)=>s+x.requests,0),lr=daily.slice(-7).reduce((s,x)=>s+x.requests,0);
+    reqTrend=lr>fr*1.1?'up':lr<fr*.9?'down':'flat';
+  }
+
+  const filterLabel=isFiltered?` <span style="font-size:11px;color:var(--orange);font-weight:400">(filtrované)</span>`:'';
+  document.getElementById('kpi-row').innerHTML=`
+    <div class="kpi orange"><div class="kpi-label">Requesty${filterLabel}</div><div class="kpi-value">${fmt(kpiReq)}</div><div class="kpi-sub">${fmt(kpiPrompt)} prompt + ${fmt(kpiCompl)} compl</div>${isFiltered?'':`<div class="kpi-trend ${reqTrend}">${reqTrend==='up'?'↑':reqTrend==='down'?'↓':'→'} 7d</div>`}</div>
+    <div class="kpi red"><div class="kpi-label">AI náklady${filterLabel}</div><div class="kpi-value">${fU(kpiCost)}</div><div class="kpi-sub">≈ ${fE(kpiCostEUR)}</div>${isFiltered?'':`<div class="kpi-trend ${costTrend==='up'?'down':costTrend==='down'?'up':'flat'}">${costTrend==='up'?'↑ rastie':costTrend==='down'?'↓ klesá':'→'}</div>`}</div>
+    <div class="kpi green"><div class="kpi-label">Mesačný príjem</div><div class="kpi-value">${fE(r.monthlyGrossEUR)}</div><div class="kpi-sub">po Apple: ${fE(r.netRevenueEUR)}</div></div>
+    <div class="kpi ${(r.profitEUR||0)>=0?'green':'red'}"><div class="kpi-label">Profit</div><div class="kpi-value">${fE(r.profitEUR)}</div><div class="kpi-sub">príjem − Apple − AI</div></div>
+    <div class="kpi blue"><div class="kpi-label">Používatelia</div><div class="kpi-value">${kpiUsers}</div><div class="kpi-sub">trial: ${s.trial||0} · premium: ${s.premium||0} · BYOK: ${s.byok||0}</div></div>
+    <div class="kpi purple"><div class="kpi-label">Avg / request${filterLabel}</div><div class="kpi-value">${fU(kpiAvg)}</div><div class="kpi-sub">ARPU: ${fE(kpiArpu)}/mes</div></div>
+  `;
+  renderUserDetail();
+  renderCredits(d.openRouterBalance,d.openRouterTrialBalance);
+  renderCharts(d);
+  renderPrediction(daily);
+  renderPareto(allUsers);
+  renderEngagement(d.usageStatsSummary||{});
+  renderGeoMap(allUsers);
+  renderTable('tbl-models',d.byModel||{},['requests','prompt','completion','cost'],shortModel);
+  renderTable('tbl-tasks',d.byTask||{},['requests','prompt','completion','cost']);
+  renderUsers(filteredUsers);
+  renderLocale(d.localeDistribution||{});
+  renderPricing(d.modelPricing||{});
+}
+
+function renderCredits(premium,trial){
+  const card=(label,data,color)=>{
+    if(!data)return`<div class="credit-card"><h3><span class="dot" style="background:${color}"></span>${label}</h3><div class="unavailable">Nedostupné</div></div>`;
+    const pct=data.credits?((data.remaining/data.credits)*100):0;
+    const bc=pct>50?'var(--green)':pct>20?'var(--yellow)':'var(--red)';
+    return`<div class="credit-card"><h3><span class="dot" style="background:${bc}"></span>${label}</h3>
+      <div class="credit-vals"><span>${fU(data.remaining)}</span><span>z ${fU(data.credits)}</span></div>
+      <div style="font-size:12px;color:var(--text2)">Spotrebované: ${fU(data.usage)} (${fPct(100-pct)})</div>
+      <div class="progress-bar"><div class="fill" style="width:${pct}%;background:${bc}"></div></div></div>`;
+  };
+  document.getElementById('credit-row').innerHTML=card('Premium kredit',premium,'var(--green)')+card('Trial kredit',trial,'var(--blue)');
+}
+
+function destroyChart(id){if(charts[id]){charts[id].destroy();delete charts[id]}}
+const CC=['#f97316','#3b82f6','#22c55e','#a855f7','#ef4444','#eab308','#06b6d4','#ec4899','#14b8a6','#f43f5e'];
+
+function renderCharts(d){
+  const daily=d.daily||[],labels=daily.map(x=>x.date.slice(5)),costs=daily.map(x=>x.cost),reqs=daily.map(x=>x.requests);
+  // 7d MA
+  const ma7=costs.map((_,i)=>i<6?null:costs.slice(i-6,i+1).reduce((s,v)=>s+v,0)/7);
+  destroyChart('daily-cost');
+  charts['daily-cost']=new Chart(document.getElementById('chart-daily-cost'),{type:'line',data:{labels,datasets:[
+    {label:'Denne',data:costs,borderColor:'var(--orange)',backgroundColor:'rgba(249,115,22,.12)',fill:true,tension:.3,pointRadius:2,borderWidth:2},
+    {label:'7d priemer',data:ma7,borderColor:'rgba(59,130,246,.5)',borderDash:[4,3],pointRadius:0,tension:.4,borderWidth:1.5,fill:false}
+  ]},options:{responsive:true,plugins:{legend:{labels:{color:'#9393a0',font:{size:11}}}},scales:{x:{ticks:{color:'#9393a0',font:{size:11}},grid:{color:'#1e1e2e'}},y:{ticks:{color:'#9393a0',callback:v=>'$'+v.toFixed(3)},grid:{color:'#1e1e2e'}}}}});
+
+  destroyChart('daily-req');
+  charts['daily-req']=new Chart(document.getElementById('chart-daily-req'),{type:'bar',data:{labels,datasets:[{label:'Requesty',data:reqs,backgroundColor:'rgba(59,130,246,.7)',borderRadius:4}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#9393a0',font:{size:11}},grid:{color:'#1e1e2e'}},y:{ticks:{color:'#9393a0'},grid:{color:'#1e1e2e'}}}}});
+
+  const models=Object.entries(d.byModel||{});
+  destroyChart('model');
+  charts['model']=new Chart(document.getElementById('chart-model'),{type:'doughnut',data:{labels:models.map(([k])=>shortModel(k)),datasets:[{data:models.map(([,v])=>v.cost||0),backgroundColor:CC.slice(0,models.length),borderWidth:0}]},options:{responsive:true,plugins:{legend:{position:'bottom',labels:{color:'#e4e4e7',font:{size:11},padding:8}}},cutout:'60%'}});
+
+  const tasks=Object.entries(d.byTask||{}).sort((a,b)=>(b[1].requests||0)-(a[1].requests||0));
+  destroyChart('task');
+  charts['task']=new Chart(document.getElementById('chart-task'),{type:'bar',data:{labels:tasks.map(([k])=>k),datasets:[{label:'Requesty',data:tasks.map(([,v])=>v.requests),backgroundColor:'rgba(168,85,247,.7)',borderRadius:4}]},options:{indexAxis:'y',responsive:true,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#9393a0'},grid:{color:'#1e1e2e'}},y:{ticks:{color:'#9393a0',font:{size:11}},grid:{color:'#1e1e2e'}}}}});
+}
+
+function renderPrediction(daily){
+  destroyChart('predict');if(!daily.length)return;
+  const costs=daily.map(x=>x.cost),n=costs.length;
+  let sx=0,sy=0,sxx=0,sxy=0;
+  for(let i=0;i<n;i++){sx+=i;sy+=costs[i];sxx+=i*i;sxy+=i*costs[i]}
+  const slope=(n*sxy-sx*sy)/(n*sxx-sx*sx||1),intercept=(sy-slope*sx)/n;
+  const regLine=[];for(let i=0;i<n;i++)regLine.push(Math.max(0,slope*i+intercept));
+  const futureLabels=[],futurePred=[],lastDate=new Date(daily[n-1].date);
+  for(let i=1;i<=7;i++){const fd=new Date(lastDate);fd.setDate(fd.getDate()+i);futureLabels.push(fd.toISOString().slice(5,10));futurePred.push(Math.max(0,slope*(n-1+i)+intercept))}
+  const allLabels=[...daily.map(x=>x.date.slice(5)),...futureLabels];
+  const predictedMonthly=(slope*(n+15)+intercept)*30;
+  charts['predict']=new Chart(document.getElementById('chart-predict'),{type:'line',data:{labels:allLabels,datasets:[
+    {label:'Skutočné',data:[...costs,...Array(7).fill(null)],borderColor:'var(--orange)',backgroundColor:'rgba(249,115,22,.1)',fill:true,tension:.3,pointRadius:2,spanGaps:false,borderWidth:2},
+    {label:'Predikcia',data:[...regLine,...futurePred],borderColor:'#9393a0',borderDash:[6,4],pointRadius:0,tension:.3,fill:false,borderWidth:1.5}
+  ]},options:{responsive:true,plugins:{legend:{labels:{color:'#e4e4e7'}},subtitle:{display:true,text:'Predpokladané mesačné: '+fU(predictedMonthly),color:'#9393a0',font:{size:12}}},scales:{x:{ticks:{color:'#9393a0',font:{size:11}},grid:{color:'#1e1e2e'}},y:{ticks:{color:'#9393a0',callback:v=>'$'+v.toFixed(3)},grid:{color:'#1e1e2e'}}}}});
+}
+
+function renderPareto(users){
+  destroyChart('pareto');if(!users.length)return;
+  const sorted=[...users].sort((a,b)=>(b.cost||0)-(a.cost||0));
+  const tc=sorted.reduce((s,u)=>s+(u.cost||0),0);let cum=0;
+  const cumPct=sorted.map(u=>{cum+=(u.cost||0);return tc?(cum/tc)*100:0});
+  charts['pareto']=new Chart(document.getElementById('chart-pareto'),{type:'bar',data:{labels:sorted.map(u=>u.display_name||shortId(u.id)),datasets:[
+    {label:'Náklady',data:sorted.map(u=>u.cost||0),backgroundColor:'rgba(249,115,22,.7)',borderRadius:4,yAxisID:'y'},
+    {label:'Kumulatívne %',data:cumPct,type:'line',borderColor:'var(--blue)',pointRadius:3,pointBackgroundColor:'var(--blue)',yAxisID:'y1',fill:false,borderWidth:2}
+  ]},options:{responsive:true,plugins:{legend:{labels:{color:'#e4e4e7'}}},scales:{x:{ticks:{color:'#9393a0',font:{size:11}},grid:{color:'#1e1e2e'}},y:{position:'left',ticks:{color:'#9393a0',callback:v=>'$'+v.toFixed(3)},grid:{color:'#1e1e2e'}},y1:{position:'right',min:0,max:100,ticks:{color:'#9393a0',callback:v=>v+'%'},grid:{display:false}}}}});
+}
+
+function renderEngagement(s){
+  document.getElementById('engage-row').innerHTML=[
+    {v:s.totalWorkouts||0,l:'Tréningy dokončené',i:'🏋️'},{v:s.totalFoodsLogged||0,l:'Jedlá zalogované',i:'🍎'},
+    {v:s.totalTrainingMinutes||0,l:'Minúty tréningu',i:'⏱'},{v:s.totalAiConversations||0,l:'AI konverzácie',i:'💬'}
+  ].map(x=>`<div class="engage-card"><div style="font-size:24px">${x.i}</div><div class="val">${fmt(x.v)}</div><div class="lbl">${x.l}</div></div>`).join('');
+}
+
+function renderTable(id,obj,fields,keyFn){
+  const tbody=document.querySelector('#'+id+' tbody');
+  const rows=Object.entries(obj).sort((a,b)=>(b[1].requests||0)-(a[1].requests||0));
+  tbody.innerHTML=rows.map(([k,v])=>`<tr><td>${keyFn?keyFn(k):k}</td>${fields.map(f=>`<td>${f==='cost'?fU(v[f]):fmt(v[f])}</td>`).join('')}</tr>`).join('')||'<tr><td colspan="5" class="empty">Žiadne dáta</td></tr>';
+}
+
+function renderUsers(users){
+  const tbody=document.querySelector('#tbl-users tbody');
+  const pm=getPromoDeviceMap();
+  const planBadge=p=>`<span class="badge badge-${p}">${p}</span>`;
+  tbody.innerHTML=users.sort((a,b)=>(b.cost||0)-(a.cost||0)).map(u=>{
+    const promo=pm.get(u.id);
+    return`<tr><td>${u.display_name||shortId(u.id)}</td><td>${u.device_model||'—'}</td><td>${u.os_version||'—'}</td><td>${u.app_version||'—'}</td><td>${u.locale||'—'}</td><td>${planBadge(u.plan||'trial')}</td><td>${promo?`<span class="badge badge-promo">${promo}</span>`:'—'}</td><td>${fmt(u.requests)}</td><td>${fU(u.cost)}</td><td>${fDate(u.last_seen_at)}</td></tr>`;
+  }).join('')||'<tr><td colspan="10" class="empty">Žiadni používatelia</td></tr>';
+}
+
+function renderUserDetail(){
+  const el=document.getElementById('user-detail');
+  if(currentUserFilter==='all'){el.classList.remove('show');el.innerHTML='';return}
+  const u=(dashData?.users||[]).find(x=>x.id===currentUserFilter);
+  if(!u){el.classList.remove('show');return}
+  el.classList.add('show');
+
+  const allUsers=dashData.users||[];
+  const pm=getPromoDeviceMap();
+  const promo=pm.get(u.id);
+  const plan=u.plan||'trial';
+  const name=u.display_name||shortId(u.id);
+  const initials=(name.match(/[A-Za-z0-9]/g)||['?']).slice(0,2).join('').toUpperCase();
+  const totalCost=allUsers.reduce((s,x)=>s+(x.cost||0),0);
+  const totalReq=allUsers.reduce((s,x)=>s+(x.requests||0),0);
+  const costPct=totalCost>0?((u.cost||0)/totalCost*100):0;
+  const reqPct=totalReq>0?((u.requests||0)/totalReq*100):0;
+  const rank=allUsers.sort((a,b)=>(b.cost||0)-(a.cost||0)).findIndex(x=>x.id===u.id)+1;
+  const firstSeen=u.first_seen_at||u.created_at;
+  const daysSince=firstSeen?Math.max(1,Math.ceil((new Date()-new Date(firstSeen))/(864e5))):1;
+  const costPerDay=(u.cost||0)/daysSince;
+  const reqPerDay=(u.requests||0)/daysSince;
+  const avgTokensPerReq=(u.requests&&u.requests>0)?Math.round(((u.promptTokens||0)+(u.completionTokens||0))/(u.requests)):0;
+
+  // Model breakdown for this user (if available)
+  const userModels=u.byModel||{};
+  const userTasks=u.byTask||{};
+  const hasModels=Object.keys(userModels).length>0;
+  const hasTasks=Object.keys(userTasks).length>0;
+
+  let modelsHTML='';
+  if(hasModels){
+    const sorted=Object.entries(userModels).sort((a,b)=>(b[1].cost||b[1].requests||0)-(a[1].cost||a[1].requests||0));
+    const maxVal=sorted[0]?sorted[0][1].cost||sorted[0][1].requests||1:1;
+    modelsHTML=`<div class="ud-section"><h4>Modely</h4>${sorted.map(([m,v])=>{
+      const pct=maxVal>0?((v.cost||v.requests||0)/maxVal*100):0;
+      return`<div class="ud-bar-row"><span class="bar-label">${shortModel(m)}</span><div class="bar-wrap"><div class="bar-fill" style="width:${pct}%;background:var(--purple)"></div></div><span class="bar-val">${v.cost?fU(v.cost):fmt(v.requests)}</span></div>`;
+    }).join('')}</div>`;
+  }
+
+  let tasksHTML='';
+  if(hasTasks){
+    const sorted=Object.entries(userTasks).sort((a,b)=>(b[1].requests||0)-(a[1].requests||0));
+    const maxVal=sorted[0]?sorted[0][1].requests||1:1;
+    tasksHTML=`<div class="ud-section"><h4>Tasky</h4>${sorted.map(([t,v])=>{
+      const pct=maxVal>0?((v.requests||0)/maxVal*100):0;
+      return`<div class="ud-bar-row"><span class="bar-label">${t}</span><div class="bar-wrap"><div class="bar-fill" style="width:${pct}%;background:var(--cyan)"></div></div><span class="bar-val">${fmt(v.requests)}</span></div>`;
+    }).join('')}</div>`;
+  }
+
+  // Cost share bar
+  const shareHTML=`<div class="ud-section"><h4>Podiel na celku</h4>
+    <div class="ud-bar-row"><span class="bar-label">Náklady</span><div class="bar-wrap"><div class="bar-fill" style="width:${costPct}%;background:var(--orange)"></div></div><span class="bar-val">${fPct(costPct)}</span></div>
+    <div class="ud-bar-row"><span class="bar-label">Requesty</span><div class="bar-wrap"><div class="bar-fill" style="width:${reqPct}%;background:var(--blue)"></div></div><span class="bar-val">${fPct(reqPct)}</span></div>
+  </div>`;
+
+  el.innerHTML=`
+    <span class="ud-close" onclick="closeUserDetail()">✕</span>
+    <div class="ud-header">
+      <div class="ud-avatar">${initials}</div>
+      <div>
+        <div class="ud-name">${name}</div>
+        <div class="ud-id">${u.id}</div>
+        <div class="ud-badges">
+          <span class="badge badge-${plan}">${plan}</span>
+          ${promo?`<span class="badge badge-promo">${promo}</span>`:''}
+          <span class="badge" style="background:var(--card2);color:var(--text2)">#${rank} podľa nákladov</span>
+        </div>
+      </div>
+    </div>
+    <div class="ud-grid">
+      <div class="ud-stat"><div class="label">Requesty</div><div class="value">${fmt(u.requests)}</div><div class="sub">${reqPerDay.toFixed(1)} / deň</div></div>
+      <div class="ud-stat"><div class="label">Náklady</div><div class="value">${fU(u.cost)}</div><div class="sub">${fU(costPerDay)} / deň</div></div>
+      <div class="ud-stat"><div class="label">Prompt tokeny</div><div class="value">${fmt(u.promptTokens)}</div><div class="sub">${avgTokensPerReq?fmt(avgTokensPerReq)+' / req':''}</div></div>
+      <div class="ud-stat"><div class="label">Completion tokeny</div><div class="value">${fmt(u.completionTokens)}</div></div>
+      <div class="ud-stat"><div class="label">Aktívnych dní</div><div class="value">${daysSince}</div><div class="sub">od ${fDateShort(firstSeen)}</div></div>
+      <div class="ud-stat"><div class="label">Posledná aktivita</div><div class="value" style="font-size:14px">${fDate(u.last_seen_at)}</div></div>
+    </div>
+    <div class="ud-meta-grid">
+      <div class="ud-meta-item"><span class="mk">Zariadenie</span>${u.device_model||'—'}</div>
+      <div class="ud-meta-item"><span class="mk">OS</span>${u.os_version||'—'}</div>
+      <div class="ud-meta-item"><span class="mk">App verzia</span>${u.app_version||'—'}</div>
+      <div class="ud-meta-item"><span class="mk">Jazyk</span>${(u.locale||'—').toUpperCase()}</div>
+    </div>
+    ${shareHTML}
+    ${modelsHTML}
+    ${tasksHTML}
+  `;
+}
+
+function renderLocale(dist){
+  document.getElementById('locale-chips').innerHTML=Object.entries(dist).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<div class="locale-chip"><strong>${k.toUpperCase()}</strong> ${v}</div>`).join('');
+}
+function renderPricing(pricing){
+  document.querySelector('#tbl-pricing tbody').innerHTML=Object.entries(pricing).map(([k,v])=>`<tr><td>${shortModel(k)}</td><td>$${v.prompt}</td><td>$${v.completion}</td></tr>`).join('');
+}
+
+// ══════════════════════════════════════════
+// PAGE 2: RAST & KAMPANE
+// ══════════════════════════════════════════
+function renderGrowthPage(){
+  const users=(dashData?.users||[]).slice();
+  const pm=getPromoDeviceMap();
+  const now=new Date();
+  const day7=new Date(now-7*864e5),day30=new Date(now-30*864e5);
+
+  // ── Sort by registration date ──
+  const withDate=users.map(u=>({...u,regDate:u.first_seen_at||u.created_at||u.last_seen_at})).filter(u=>u.regDate);
+  withDate.sort((a,b)=>new Date(a.regDate)-new Date(b.regDate));
+
+  // ── KPIs ──
+  const total=users.length;
+  const new7=withDate.filter(u=>new Date(u.regDate)>=day7).length;
+  const new30=withDate.filter(u=>new Date(u.regDate)>=day30).length;
+  const premiumCount=users.filter(u=>(u.plan||'trial')==='premium').length;
+  const byokCount=users.filter(u=>(u.plan||'trial')==='byok').length;
+  const trialCount=total-premiumCount-byokCount;
+  const convRate=total>0?((premiumCount+byokCount)/total*100):0;
+  const active7=users.filter(u=>u.last_seen_at&&new Date(u.last_seen_at)>=day7).length;
+  const active30=users.filter(u=>u.last_seen_at&&new Date(u.last_seen_at)>=day30).length;
+  const ret7=total>0?(active7/total*100):0;
+  const ret30=total>0?(active30/total*100):0;
+  const promoUsers=users.filter(u=>pm.has(u.id)).length;
+  const organicUsers=total-promoUsers;
+  const prev7=withDate.filter(u=>{const d=new Date(u.regDate);return d>=new Date(now-14*864e5)&&d<day7}).length;
+  const growthWoW=prev7>0?((new7-prev7)/prev7*100):new7>0?100:0;
+
+  document.getElementById('kpi-growth-row').innerHTML=`
+    <div class="kpi blue"><div class="kpi-label">Celkom používateľov</div><div class="kpi-value">${total}</div><div class="kpi-sub">premium: ${premiumCount} · trial: ${trialCount} · BYOK: ${byokCount}</div></div>
+    <div class="kpi green"><div class="kpi-label">Noví (7 dní)</div><div class="kpi-value">${new7}</div><div class="kpi-sub">30d: ${new30}</div><div class="kpi-trend ${growthWoW>0?'up':growthWoW<0?'down':'flat'}">${growthWoW>0?'↑':growthWoW<0?'↓':'→'} ${Math.abs(growthWoW).toFixed(0)}% WoW</div></div>
+    <div class="kpi orange"><div class="kpi-label">Konverzia</div><div class="kpi-value">${fPct(convRate)}</div><div class="kpi-sub">trial → premium+BYOK</div></div>
+    <div class="kpi purple"><div class="kpi-label">Z promo kódov</div><div class="kpi-value">${promoUsers}</div><div class="kpi-sub">organic: ${organicUsers}</div></div>
+    <div class="kpi cyan"><div class="kpi-label">Retencia 7d</div><div class="kpi-value">${fPct(ret7)}</div><div class="kpi-sub">${active7} z ${total} aktívnych</div></div>
+    <div class="kpi yellow"><div class="kpi-label">Retencia 30d</div><div class="kpi-value">${fPct(ret30)}</div><div class="kpi-sub">${active30} z ${total} aktívnych</div></div>
+  `;
+
+  // ── Registration daily chart ──
+  const regByDay={};
+  withDate.forEach(u=>{const d=(u.regDate).split('T')[0];regByDay[d]=(regByDay[d]||0)+1});
+  const regSorted=Object.entries(regByDay).sort((a,b)=>a[0].localeCompare(b[0]));
+  const regLabels=regSorted.map(([d])=>d.slice(5));
+  const regData=regSorted.map(([,c])=>c);
+
+  destroyChart('reg-daily');
+  charts['reg-daily']=new Chart(document.getElementById('chart-reg-daily'),{type:'bar',data:{labels:regLabels,datasets:[
+    {label:'Noví',data:regData,backgroundColor:'rgba(34,197,94,.7)',borderRadius:4}
+  ]},options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#9393a0',font:{size:11}},grid:{color:'#1e1e2e'}},y:{ticks:{color:'#9393a0',stepSize:1},grid:{color:'#1e1e2e'}}}}});
+
+  // ── Cumulative growth chart ──
+  let cum=0;const cumData=regData.map(v=>{cum+=v;return cum});
+  destroyChart('reg-cumul');
+  charts['reg-cumul']=new Chart(document.getElementById('chart-reg-cumul'),{type:'line',data:{labels:regLabels,datasets:[
+    {label:'Celkom',data:cumData,borderColor:'var(--blue)',backgroundColor:'rgba(59,130,246,.1)',fill:true,tension:.3,pointRadius:2,borderWidth:2}
+  ]},options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#9393a0',font:{size:11}},grid:{color:'#1e1e2e'}},y:{ticks:{color:'#9393a0'},grid:{color:'#1e1e2e'}}}}});
+
+  // ── Plan distribution doughnut ──
+  destroyChart('plan-dist');
+  charts['plan-dist']=new Chart(document.getElementById('chart-plan-dist'),{type:'doughnut',data:{
+    labels:['Trial','Premium','BYOK'],
+    datasets:[{data:[trialCount,premiumCount,byokCount],backgroundColor:['rgba(249,115,22,.7)','rgba(34,197,94,.7)','rgba(59,130,246,.7)'],borderWidth:0}]
+  },options:{responsive:true,plugins:{legend:{position:'bottom',labels:{color:'#e4e4e7',font:{size:12},padding:10}}},cutout:'60%'}});
+
+  // ── Conversion funnel ──
+  const funnelEl=document.getElementById('funnel-visual');
+  const fSteps=[
+    {label:'Registrácia',val:total,color:'var(--blue)'},
+    {label:'Aktívni 7d',val:active7,color:'var(--cyan)'},
+    {label:'Premium',val:premiumCount,color:'var(--green)'},
+    {label:'BYOK',val:byokCount,color:'var(--purple)'}
+  ];
+  const maxF=Math.max(total,1);
+  funnelEl.innerHTML='<div class="funnel">'+fSteps.map((s,i)=>{
+    const pct=Math.max(8,(s.val/maxF)*100);
+    const dropoff=i>0&&fSteps[i-1].val>0?((1-s.val/fSteps[i-1].val)*100).toFixed(0)+'% odpad':'';
+    return(i>0?`<div class="funnel-arrow">↓ ${dropoff}</div>`:'')+
+    `<div class="funnel-step"><span class="funnel-label">${s.label}</span><div class="funnel-bar" style="width:${pct}%;background:${s.color}">${s.val}</div><span class="funnel-val">${(s.val/maxF*100).toFixed(0)}%</span></div>`;
+  }).join('')+'</div>';
+
+  // ── Retention KPIs (already in main KPIs, add detail) ──
+  const churned=users.filter(u=>u.last_seen_at&&new Date(u.last_seen_at)<day30).length;
+  const churnRate=total>0?(churned/total*100):0;
+  const avgDays=withDate.length>0?(withDate.reduce((s,u)=>{
+    const fs=new Date(u.regDate),ls=new Date(u.last_seen_at||now);
+    return s+Math.max(1,Math.ceil((ls-fs)/864e5));
+  },0)/withDate.length):0;
+  document.getElementById('kpi-retention-row').innerHTML=`
+    <div class="kpi green"><div class="kpi-label">Aktívni dnes</div><div class="kpi-value">${users.filter(u=>u.last_seen_at&&new Date(u.last_seen_at).toDateString()===now.toDateString()).length}</div></div>
+    <div class="kpi blue"><div class="kpi-label">Aktívni 7d</div><div class="kpi-value">${active7}</div><div class="kpi-sub">${fPct(ret7)} z celku</div></div>
+    <div class="kpi orange"><div class="kpi-label">Aktívni 30d</div><div class="kpi-value">${active30}</div><div class="kpi-sub">${fPct(ret30)} z celku</div></div>
+    <div class="kpi red"><div class="kpi-label">Churn (30d+)</div><div class="kpi-value">${churned}</div><div class="kpi-sub">${fPct(churnRate)}</div></div>
+    <div class="kpi purple"><div class="kpi-label">Ø životnosť</div><div class="kpi-value">${avgDays.toFixed(0)}d</div><div class="kpi-sub">priemer dní aktivity</div></div>
+  `;
+
+  // ── Campaign source table ──
+  const sources=new Map();
+  users.forEach(u=>{
+    const src=pm.has(u.id)?pm.get(u.id):'Organic';
+    if(!sources.has(src))sources.set(src,{users:[],premium:0,req:0,cost:0,active7:0});
+    const s=sources.get(src);
+    s.users.push(u);
+    if((u.plan||'trial')==='premium'||(u.plan||'trial')==='byok')s.premium++;
+    s.req+=(u.requests||0);
+    s.cost+=(u.cost||0);
+    if(u.last_seen_at&&new Date(u.last_seen_at)>=day7)s.active7++;
+  });
+  const srcRows=[...sources.entries()].sort((a,b)=>b[1].users.length-a[1].users.length);
+  document.querySelector('#tbl-campaigns tbody').innerHTML=srcRows.map(([name,s])=>{
+    const conv=s.users.length>0?(s.premium/s.users.length*100):0;
+    const avgC=s.users.length>0?s.cost/s.users.length:0;
+    const ret=s.users.length>0?(s.active7/s.users.length*100):0;
+    const isPromo=name!=='Organic';
+    return`<tr><td>${isPromo?`<span class="badge badge-promo">${name}</span>`:`<span class="badge" style="background:var(--card2);color:var(--text2)">${name}</span>`}</td><td><strong>${s.users.length}</strong></td><td>${fPct(conv)}</td><td>${fmt(s.req)}</td><td>${fU(s.cost)}</td><td>${fU(avgC)}</td><td>${fPct(ret)}</td></tr>`;
+  }).join('')||'<tr><td colspan="7" class="empty">Žiadne dáta</td></tr>';
+
+  // ── Weekly cohorts ──
+  renderCohorts(withDate);
+
+  // ── Newest users table ──
+  const newest=[...withDate].reverse().slice(0,20);
+  document.querySelector('#tbl-new-users tbody').innerHTML=newest.map(u=>{
+    const src=pm.has(u.id)?pm.get(u.id):'Organic';
+    const isP=src!=='Organic';
+    return`<tr><td>${u.display_name||shortId(u.id)}</td><td>${u.device_model||'—'}</td><td><span class="badge badge-${u.plan||'trial'}">${u.plan||'trial'}</span></td><td>${isP?`<span class="badge badge-promo">${src}</span>`:'Organic'}</td><td>${fDate(u.regDate)}</td><td>${fDate(u.last_seen_at)}</td><td>${fmt(u.requests)}</td><td>${fU(u.cost)}</td></tr>`;
+  }).join('')||'<tr><td colspan="8" class="empty">Žiadni používatelia</td></tr>';
+}
+
+// Locale → country mapping
+const LOCALE_COUNTRY={
+  'sk':'SK','cs':'CZ','en':'US','en-us':'US','en-gb':'GB','de':'DE','de-at':'AT','de-ch':'CH',
+  'pl':'PL','hu':'HU','fr':'FR','es':'ES','it':'IT','pt':'PT','pt-br':'BR','nl':'NL','ro':'RO',
+  'bg':'BG','hr':'HR','sl':'SI','sr':'RS','uk':'UA','ru':'RU','ja':'JP','ko':'KR','zh':'CN',
+  'ar':'SA','tr':'TR','sv':'SE','da':'DK','fi':'FI','no':'NO','nb':'NO','el':'GR','he':'IL',
+  'th':'TH','vi':'VN','id':'ID','ms':'MY','hi':'IN','bn':'IN','ta':'IN'
+};
+const COUNTRY_NAME={
+  SK:'Slovensko',CZ:'Česko',US:'USA',GB:'Veľká Británia',DE:'Nemecko',AT:'Rakúsko',CH:'Švajčiarsko',
+  PL:'Poľsko',HU:'Maďarsko',FR:'Francúzsko',ES:'Španielsko',IT:'Taliansko',PT:'Portugalsko',
+  BR:'Brazília',NL:'Holandsko',RO:'Rumunsko',BG:'Bulharsko',HR:'Chorvátsko',SI:'Slovinsko',
+  RS:'Srbsko',UA:'Ukrajina',RU:'Rusko',JP:'Japonsko',KR:'Kórea',CN:'Čína',SA:'Saudská Arábia',
+  TR:'Turecko',SE:'Švédsko',DK:'Dánsko',FI:'Fínsko',NO:'Nórsko',GR:'Grécko',IL:'Izrael',
+  TH:'Thajsko',VN:'Vietnam',ID:'Indonézia',MY:'Malajzia',IN:'India'
+};
+const COUNTRY_FLAG=c=>{
+  try{return String.fromCodePoint(...[...c.toUpperCase()].map(ch=>0x1F1E6-65+ch.charCodeAt(0)))}catch(e){return'🌐'}
+};
+// ISO 3166-1 alpha-2 → alpha-3 for Natural Earth style IDs
+const A2_TO_A3={
+  SK:'SVK',CZ:'CZE',US:'USA',GB:'GBR',DE:'DEU',AT:'AUT',CH:'CHE',PL:'POL',HU:'HUN',FR:'FRA',
+  ES:'ESP',IT:'ITA',PT:'PRT',BR:'BRA',NL:'NLD',RO:'ROU',BG:'BGR',HR:'HRV',SI:'SVN',RS:'SRB',
+  UA:'UKR',RU:'RUS',JP:'JPN',KR:'KOR',CN:'CHN',SA:'SAU',TR:'TUR',SE:'SWE',DK:'DNK',FI:'FIN',
+  NO:'NOR',GR:'GRC',IL:'ISR',TH:'THA',VN:'VNM',ID:'IDN',MY:'MYS',IN:'IND'
+};
+
+let _worldGeo=null;
+async function renderGeoMap(users){
+  // ── Aggregate by country (alpha-2) ──
+  const byCountry={};
+  users.forEach(u=>{
+    const loc=(u.locale||'').toLowerCase().trim();
+    const cc=LOCALE_COUNTRY[loc]||LOCALE_COUNTRY[loc.split('-')[0]]||LOCALE_COUNTRY[loc.split('_')[0]];
+    if(cc){byCountry[cc]=(byCountry[cc]||0)+1}
+    else if(loc){byCountry[loc.toUpperCase()]=(byCountry[loc.toUpperCase()]||0)+1}
+  });
+  const sorted=Object.entries(byCountry).sort((a,b)=>b[1]-a[1]);
+  const maxCount=sorted.length>0?sorted[0][1]:1;
+  const totalMapped=sorted.reduce((s,[,c])=>s+c,0);
+
+  // ── Build alpha-3 lookup for TopoJSON matching ──
+  const byA3={};
+  sorted.forEach(([cc,cnt])=>{const a3=A2_TO_A3[cc];if(a3)byA3[a3]=cnt});
+
+  // ── Color scale (continuous orange gradient) ──
+  const colorScale=d3.scaleSequential()
+    .domain([0,maxCount||1])
+    .interpolator(t=>d3.interpolateRgb('#1a1a28','#f97316')(Math.pow(t,0.55)));
+
+  // ── Legend ──
+  const legendEl=document.getElementById('map-legend');
+  const grad='linear-gradient(to right,#1a1a28,rgba(249,115,22,.3),rgba(249,115,22,.65),#f97316)';
+  legendEl.innerHTML=`
+    <span style="font-size:12px;color:var(--text2)">Celkom: <strong style="color:var(--text)">${totalMapped}</strong></span>
+    <div class="map-legend-bar">
+      <span>0</span>
+      <div class="map-legend-gradient" style="background:${grad}"></div>
+      <span>${maxCount}</span>
+    </div>`;
+
+  // ── Load TopoJSON (cache after first fetch) ──
+  const mapEl=document.getElementById('geo-map');
+  if(!_worldGeo){
+    try{
+      mapEl.innerHTML='<div style="padding:40px;text-align:center;color:var(--text2)">Načítavam mapu…</div>';
+      const resp=await fetch('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json');
+      const world=await resp.json();
+      _worldGeo=topojson.feature(world,world.objects.countries);
+      // Attach alpha-3 ids from Natural Earth numeric→alpha3
+      const numToA3={"004":"AFG","008":"ALB","012":"DZA","020":"AND","024":"AGO","028":"ATG","032":"ARG","051":"ARM","036":"AUS","040":"AUT","031":"AZE","044":"BHS","048":"BHR","050":"BGD","052":"BRB","112":"BLR","056":"BEL","084":"BLZ","204":"BEN","064":"BTN","068":"BOL","070":"BIH","072":"BWA","076":"BRA","096":"BRN","100":"BGR","854":"BFA","108":"BDI","116":"KHM","120":"CMR","124":"CAN","132":"CPV","140":"CAF","148":"TCD","152":"CHL","156":"CHN","170":"COL","174":"COM","178":"COG","180":"COD","188":"CRI","384":"CIV","191":"HRV","192":"CUB","196":"CYP","203":"CZE","208":"DNK","262":"DJI","212":"DMA","214":"DOM","218":"ECU","818":"EGY","222":"SLV","226":"GNQ","232":"ERI","233":"EST","748":"SWZ","231":"ETH","242":"FJI","246":"FIN","250":"FRA","266":"GAB","270":"GMB","268":"GEO","276":"DEU","288":"GHA","300":"GRC","308":"GRD","320":"GTM","324":"GIN","624":"GNB","328":"GUY","332":"HTI","340":"HND","348":"HUN","352":"ISL","356":"IND","360":"IDN","364":"IRN","368":"IRQ","372":"IRL","376":"ISR","380":"ITA","388":"JAM","392":"JPN","400":"JOR","398":"KAZ","404":"KEN","296":"KIR","408":"PRK","410":"KOR","414":"KWT","417":"KGZ","418":"LAO","428":"LVA","422":"LBN","426":"LSO","430":"LBR","434":"LBY","438":"LIE","440":"LTU","442":"LUX","807":"MKD","450":"MDG","454":"MWI","458":"MYS","462":"MDV","466":"MLI","470":"MLT","584":"MHL","478":"MRT","480":"MUS","484":"MEX","583":"FSM","498":"MDA","492":"MCO","496":"MNG","499":"MNE","504":"MAR","508":"MOZ","104":"MMR","516":"NAM","520":"NRU","524":"NPL","528":"NLD","554":"NZL","558":"NIC","562":"NER","566":"NGA","578":"NOR","512":"OMN","586":"PAK","591":"PAN","598":"PNG","600":"PRY","604":"PER","608":"PHL","616":"POL","620":"PRT","634":"QAT","642":"ROU","643":"RUS","646":"RWA","659":"KNA","662":"LCA","670":"VCT","882":"WSM","674":"SMR","678":"STP","682":"SAU","686":"SEN","688":"SRB","690":"SYC","694":"SLE","702":"SGP","703":"SVK","705":"SVN","090":"SLB","706":"SOM","710":"ZAF","728":"SSD","724":"ESP","144":"LKA","736":"SDN","740":"SUR","752":"SWE","756":"CHE","760":"SYR","762":"TJK","834":"TZA","764":"THA","626":"TLS","768":"TGO","776":"TON","780":"TTO","788":"TUN","792":"TUR","795":"TKM","798":"TUV","800":"UGA","804":"UKR","784":"ARE","826":"GBR","840":"USA","858":"URY","860":"UZB","548":"VUT","862":"VEN","704":"VNM","887":"YEM","894":"ZMB","716":"ZWE","-99":"CYN","010":"ATA"};
+      _worldGeo.features.forEach(f=>{
+        f.properties._a3=numToA3[String(f.id)]||'';
+      });
+    }catch(e){
+      mapEl.innerHTML='<div style="padding:40px;text-align:center;color:var(--red)">Mapa sa nepodarila načítať</div>';
+      return;
+    }
+  }
+
+  // ── Setup dimensions ──
+  const W=mapEl.clientWidth||800;
+  const H=Math.min(420,W*0.52);
+  mapEl.innerHTML='';
+
+  const svg=d3.select(mapEl).append('svg')
+    .attr('viewBox',`0 0 ${W} ${H}`)
+    .attr('preserveAspectRatio','xMidYMid meet')
+    .style('width','100%').style('height','auto');
+
+  // ── Projection (Natural Earth, centered on Europe a bit) ──
+  const projection=d3.geoNaturalEarth1()
+    .fitSize([W-20,H-10],_worldGeo)
+    .translate([W/2,H/2+10]);
+  const path=d3.geoPath(projection);
+
+  // ── Tooltip ref ──
+  const tooltip=d3.select('#geo-map-tooltip');
+
+  // ── Draw countries ──
+  svg.selectAll('path.country')
+    .data(_worldGeo.features)
+    .join('path')
+    .attr('class',f=>{const a3=f.properties._a3;return'country'+(byA3[a3]?' has-data':'')})
+    .attr('d',path)
+    .attr('fill',f=>{
+      const a3=f.properties._a3;
+      const cnt=byA3[a3];
+      return cnt?colorScale(cnt):'#1a1a28';
+    })
+    .attr('stroke','#2a2a3e')
+    .attr('stroke-width',.4)
+    .on('mouseenter',function(ev,f){
+      const a3=f.properties._a3;
+      const cnt=byA3[a3];
+      // Reverse lookup alpha3 → alpha2
+      const cc=Object.entries(A2_TO_A3).find(([,v])=>v===a3);
+      const code=cc?cc[0]:a3;
+      const name=COUNTRY_NAME[code]||f.properties.name||a3||'Neznáma';
+      const flag=code&&code.length===2?COUNTRY_FLAG(code):'🌐';
+      const pct=totalMapped>0&&cnt?((cnt/totalMapped)*100).toFixed(1):'0';
+      tooltip.style('display','block').html(`
+        <div class="tt-country">${flag} ${name}</div>
+        ${cnt?`<div><span class="tt-val">${cnt}</span> používateľov <span class="tt-pct">(${pct}%)</span></div>`
+             :'<div style="color:var(--text3)">Žiadni používatelia</div>'}
+      `);
+      d3.select(this).attr('stroke','#f97316').attr('stroke-width',1.4).raise();
+    })
+    .on('mousemove',function(ev){
+      tooltip.style('left',(ev.clientX+14)+'px').style('top',(ev.clientY-10)+'px');
+    })
+    .on('mouseleave',function(){
+      tooltip.style('display','none');
+      d3.select(this).attr('stroke','#2a2a3e').attr('stroke-width',.4);
+    });
+
+  // ── Country detail grid below map ──
+  const statsEl=document.getElementById('map-stats-grid');
+  statsEl.innerHTML=sorted.map(([cc,count])=>{
+    const pct=totalMapped>0?(count/totalMapped*100).toFixed(1):'0';
+    const flag=COUNTRY_FLAG(cc);
+    const name=COUNTRY_NAME[cc]||cc;
+    const barW=Math.max(4,(count/maxCount)*100);
+    return`<div class="map-stat-row">
+      <span class="ms-flag">${flag}</span>
+      <span class="ms-name">${name}</span>
+      <div class="ms-bar"><div class="fill" style="width:${barW}%;background:var(--orange)"></div></div>
+      <span class="ms-count">${count}</span>
+      <span style="color:var(--text2);font-size:12px;min-width:40px;text-align:right">${pct}%</span>
+    </div>`;
+  }).join('')||'<div class="empty">Žiadne locale dáta</div>';
+}
+
+function renderCohorts(withDate){
+  if(!withDate.length){document.getElementById('cohort-table-wrap').innerHTML='<div class="empty">Nedostatok dát pre kohorty</div>';return}
+  const now=new Date();
+  // Group by ISO week
+  const getWeek=d=>{const dt=new Date(d);const day=dt.getDay()||7;dt.setDate(dt.getDate()+4-day);const yr=new Date(dt.getFullYear(),0,1);return dt.getFullYear()+'-W'+String(Math.ceil(((dt-yr)/864e5+1)/7)).padStart(2,'0')};
+  const cohorts=new Map();
+  withDate.forEach(u=>{
+    const w=getWeek(u.regDate);
+    if(!cohorts.has(w))cohorts.set(w,[]);
+    cohorts.get(w).push(u);
+  });
+  const weeks=[...cohorts.keys()].sort().slice(-8); // last 8 weeks
+  const retWeeks=[0,1,2,3,4]; // W0, W+1, W+2, W+3, W+4
+
+  let html='<table class="cohort-table"><thead><tr><th>Kohorta</th><th>Registrácie</th>';
+  retWeeks.forEach(w=>html+=`<th>T+${w}</th>`);
+  html+='</tr></thead><tbody>';
+
+  weeks.forEach(week=>{
+    const cohort=cohorts.get(week)||[];
+    const weekStart=(() => {
+      const [y,w]=week.split('-W').map(Number);
+      const jan4=new Date(y,0,4);
+      const d=jan4.getDate()-jan4.getDay()+1+(w-1)*7;
+      return new Date(y,0,d);
+    })();
+    html+=`<tr><td style="font-weight:600">${week}<div style="font-size:10px;color:var(--text3)">${fDateShort(weekStart)}</div></td><td><strong>${cohort.length}</strong></td>`;
+    retWeeks.forEach(rw=>{
+      const periodStart=new Date(weekStart.getTime()+rw*7*864e5);
+      const periodEnd=new Date(periodStart.getTime()+7*864e5);
+      if(periodStart>now){html+='<td>—</td>';return}
+      const active=cohort.filter(u=>u.last_seen_at&&new Date(u.last_seen_at)>=periodStart&&new Date(u.last_seen_at)<periodEnd).length;
+      // For W0 also count users active during registration week
+      const activeW0=rw===0?cohort.filter(u=>u.last_seen_at&&new Date(u.last_seen_at)>=weekStart).length:active;
+      const rate=cohort.length>0?((rw===0?activeW0:active)/cohort.length*100):0;
+      const bg=rate>70?'rgba(34,197,94,.25)':rate>40?'rgba(249,115,22,.2)':rate>10?'rgba(234,179,8,.15)':'rgba(239,68,68,.1)';
+      html+=`<td><div class="cohort-cell" style="background:${bg}">${fPct(rate)}<div style="font-size:10px;color:var(--text3)">${rw===0?activeW0:active}/${cohort.length}</div></div></td>`;
+    });
+    html+='</tr>';
+  });
+  html+='</tbody></table>';
+  document.getElementById('cohort-table-wrap').innerHTML=html;
+}
+
+// ══════════════════════════════════════════
+// PAGE 3: PROMO & MARKETING
+// ══════════════════════════════════════════
+function renderPromoPage(){
+  const codes=promoData.codes,reds=promoData.redemptions;
+  const activeCodes=codes.filter(c=>c.is_active);
+  const totalReds=reds.length;
+  const totalCap=codes.reduce((s,c)=>s+c.max_uses,0);
+  const usageRate=totalCap>0?(totalReds/totalCap)*100:0;
+  const uniqueDevs=new Set(reds.map(r=>r.device_id)).size;
+  const now=new Date();
+  const activePromo=reds.filter(r=>r.premium_until&&new Date(r.premium_until)>now).length;
+
+  // KPIs
+  document.getElementById('kpi-promo-row').innerHTML=`
+    <div class="kpi orange"><div class="kpi-label">Aktívne kódy</div><div class="kpi-value">${activeCodes.length}</div><div class="kpi-sub">z ${codes.length} celkom</div></div>
+    <div class="kpi green"><div class="kpi-label">Redemptions</div><div class="kpi-value">${totalReds}</div><div class="kpi-sub">${uniqueDevs} unikátnych zariadení</div></div>
+    <div class="kpi blue"><div class="kpi-label">Využitie kapacity</div><div class="kpi-value">${fPct(usageRate)}</div><div class="kpi-sub">${totalReds} / ${totalCap} max</div></div>
+    <div class="kpi purple"><div class="kpi-label">Aktívni promo</div><div class="kpi-value">${activePromo}</div><div class="kpi-sub">s platným premium z promo</div></div>
+  `;
+
+  // Promo cards
+  document.getElementById('promo-grid').innerHTML=codes.map(c=>{
+    const pct=c.max_uses?(c.used_count/c.max_uses)*100:0;
+    const sc=!c.is_active?'var(--red)':pct>=100?'var(--yellow)':'var(--green)';
+    const cr=reds.filter(r=>r.code_id===c.id);
+    return`<div class="promo-card">
+      <div class="promo-status" style="background:${sc}"></div>
+      <div class="code">${c.code}</div>
+      <div class="meta">${c.duration_days}d ${c.benefit_type} · ${c.note||''}</div>
+      <div style="margin-top:8px"><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text2);margin-bottom:3px"><span>${c.used_count}/${c.max_uses}</span><span>${fPct(pct)}</span></div>
+      <div class="progress-bar" style="height:6px"><div class="fill" style="width:${pct}%;background:${sc}"></div></div></div>
+      <div class="stats"><div><span class="n">${cr.length}</span>použití</div><div><span class="n">${c.duration_days}d</span>trvanie</div></div>
+    </div>`;
+  }).join('')||'<div class="empty">Žiadne promo kódy</div>';
+
+  // Timeline chart
+  renderPromoTimeline(reds);
+
+  // Promo users table
+  renderPromoUsers();
+
+  // Detail table
+  renderPromoDetail();
+}
+
+function renderPromoTimeline(reds){
+  destroyChart('promo-timeline');
+  if(!reds.length){return}
+  const byDate={};
+  reds.forEach(r=>{const d=(r.redeemed_at||'').split('T')[0];if(d)byDate[d]=(byDate[d]||0)+1});
+  const sorted=Object.entries(byDate).sort((a,b)=>a[0].localeCompare(b[0]));
+  const labels=sorted.map(([d])=>d.slice(5)),data=sorted.map(([,c])=>c);
+  let cum=0;const cumData=data.map(v=>{cum+=v;return cum});
+  charts['promo-timeline']=new Chart(document.getElementById('chart-promo-timeline'),{type:'bar',data:{labels,datasets:[
+    {label:'Denne',data,backgroundColor:'rgba(168,85,247,.6)',borderRadius:4,yAxisID:'y'},
+    {label:'Kumulatívne',data:cumData,type:'line',borderColor:'var(--orange)',pointRadius:2,borderWidth:2,yAxisID:'y1',fill:false}
+  ]},options:{responsive:true,plugins:{legend:{labels:{color:'#e4e4e7'}}},scales:{x:{ticks:{color:'#9393a0',font:{size:11}},grid:{color:'#1e1e2e'}},y:{position:'left',ticks:{color:'#9393a0'},grid:{color:'#1e1e2e'}},y1:{position:'right',ticks:{color:'#9393a0'},grid:{display:false}}}}});
+}
+
+function renderPromoUsers(){
+  const filtered=getFilteredUsers();
+  const pm=getPromoDeviceMap();
+  const tbody=document.querySelector('#tbl-promo-users tbody');
+  const planBadge=p=>`<span class="badge badge-${p}">${p}</span>`;
+  tbody.innerHTML=filtered.sort((a,b)=>(b.cost||0)-(a.cost||0)).map(u=>{
+    const promo=pm.get(u.id);
+    return`<tr><td>${u.display_name||shortId(u.id)}</td><td>${u.device_model||'—'}</td><td>${promo?`<span class="badge badge-promo">${promo}</span>`:'—'}</td><td>${planBadge(u.plan||'trial')}</td><td>${fmt(u.requests)}</td><td>${fU(u.cost)}</td><td>${fDate(u.last_seen_at)}</td></tr>`;
+  }).join('')||'<tr><td colspan="7" class="empty">Žiadni používatelia pre tento filter</td></tr>';
+}
+
+function renderPromoDetail(){
+  const tbody=document.querySelector('#tbl-promo tbody');
+  tbody.innerHTML=promoData.codes.map(c=>{
+    const pct=c.max_uses?(c.used_count/c.max_uses)*100:0;
+    let status,cls;
+    if(!c.is_active){status='Neaktívny';cls='inactive'}
+    else if(c.expires_at&&new Date(c.expires_at)<new Date()){status='Expirovaný';cls='expired'}
+    else if(c.used_count>=c.max_uses){status='Vyčerpaný';cls='expired'}
+    else{status='Aktívny';cls='active'}
+    return`<tr><td><strong style="font-family:monospace;letter-spacing:.5px">${c.code}</strong></td><td>${c.benefit_type}</td><td>${c.duration_days}d</td><td>${c.used_count}</td><td>${c.max_uses}</td>
+      <td><div style="display:flex;align-items:center;gap:6px"><div class="progress-bar" style="width:50px;height:5px"><div class="fill" style="width:${pct}%;background:${pct>=100?'var(--yellow)':'var(--green)'}"></div></div>${fPct(pct)}</div></td>
+      <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis">${c.note||'—'}</td><td><span class="badge badge-${cls}">${status}</span></td><td>${fDateShort(c.created_at)}</td><td>${c.expires_at?fDateShort(c.expires_at):'∞'}</td></tr>`;
+  }).join('')||'<tr><td colspan="10" class="empty">Žiadne promo kódy</td></tr>';
+}
+
+// ── EXPORT CSV ──
+function exportCSV(){
+  if(!dashData)return;
+  const users=dashData.users||[],pm=getPromoDeviceMap();
+  let csv='Meno,Zariadenie,OS,App,Lokál,Plán,Promo,Requesty,Náklady,Posledná aktivita\n';
+  users.forEach(u=>{csv+=`"${u.display_name||shortId(u.id)}","${u.device_model||''}","${u.os_version||''}","${u.app_version||''}","${u.locale||''}","${u.plan||'trial'}","${pm.get(u.id)||''}",${u.requests||0},${(u.cost||0).toFixed(4)},"${fDate(u.last_seen_at)}"\n`});
+  csv+='\nPromo kódy\nKód,Typ,Trvanie,Použité,Max,Poznámka,Stav\n';
+  promoData.codes.forEach(c=>{const st=!c.is_active?'Neaktívny':c.used_count>=c.max_uses?'Vyčerpaný':'Aktívny';csv+=`"${c.code}","${c.benefit_type}",${c.duration_days},${c.used_count},${c.max_uses},"${c.note||''}","${st}"\n`});
+  const blob=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8;'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='subten-export-'+new Date().toISOString().slice(0,10)+'.csv';a.click();
+}
+
+// ── INIT ──
+checkAuth();
+</script>
+</body>
+</html>
