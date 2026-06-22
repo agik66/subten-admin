@@ -161,6 +161,17 @@ tr:hover td{background:var(--card2)}
 .locale-chip strong{color:var(--orange)}
 .section-title{font-size:16px;font-weight:700;margin:28px 0 14px;padding-bottom:8px;border-bottom:1px solid var(--border)}
 .empty{text-align:center;padding:24px;color:var(--text3);font-size:13px}
+.utf-bar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+.utf-bar input,.utf-bar select{padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:13px;outline:none;transition:border .2s}
+.utf-bar input:focus,.utf-bar select:focus{border-color:var(--orange)}
+.utf-bar input[type=text]{min-width:200px;flex:1;max-width:280px}
+.utf-bar input[type=date]{color-scheme:dark}
+.utf-bar label.field{font-size:12px;color:var(--text2);display:flex;align-items:center;gap:6px}
+.utf-toggle{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--text2);cursor:pointer;user-select:none;padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:var(--card)}
+.utf-toggle.on{border-color:var(--orange);color:var(--orange)}
+.utf-count{font-size:12px;color:var(--text3);margin-left:auto;white-space:nowrap}
+.day-group td{background:var(--card2);font-weight:700;color:var(--text);font-size:13px}
+.day-group .day-count{color:var(--text3);font-weight:600;margin-left:8px}
 
 /* LOADING */
 .loading{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px 20px;gap:16px}
@@ -394,7 +405,23 @@ tr:hover td{background:var(--card2)}
       <div class="table-card"><table id="tbl-tasks"><thead><tr><th>Task</th><th>Requesty</th><th>Prompt</th><th>Completion</th><th>Náklady</th></tr></thead><tbody></tbody></table></div>
 
       <div class="section-title">Používatelia</div>
-      <div class="table-card"><table id="tbl-users"><thead><tr><th>Meno/ID</th><th>Zariadenie</th><th>OS</th><th>App</th><th>Lokál</th><th>Plán</th><th>Promo</th><th>Requesty</th><th>Náklady</th><th>Posledná aktivita</th></tr></thead><tbody></tbody></table></div>
+      <div class="utf-bar">
+        <input type="text" id="utf-search" placeholder="Hľadať email, ID alebo meno…" oninput="onUserTblFilter()">
+        <label class="field">Plán
+          <select id="utf-plan" onchange="onUserTblFilter()">
+            <option value="all">Všetky</option>
+            <option value="premium">premium</option>
+            <option value="trial">trial</option>
+            <option value="free">free</option>
+          </select>
+        </label>
+        <label class="field">Reg. od <input type="date" id="utf-from" onchange="onUserTblFilter()"></label>
+        <label class="field">do <input type="date" id="utf-to" onchange="onUserTblFilter()"></label>
+        <label class="utf-toggle" id="utf-group-toggle"><input type="checkbox" id="utf-groupday" onchange="onUserTblFilter()">Zoskupiť po dňoch</label>
+        <button class="btn-sm" onclick="clearUserTblFilters()">✕ Vyčistiť</button>
+        <span class="utf-count" id="utf-count"></span>
+      </div>
+      <div class="table-card"><table id="tbl-users"><thead><tr><th>Meno/ID</th><th>Email</th><th>Zariadenie</th><th>OS</th><th>App</th><th>Lokál</th><th>Plán</th><th>Promo</th><th>Requesty</th><th>Náklady</th><th>Posledná aktivita</th></tr></thead><tbody></tbody></table></div>
 
       <div class="section-title">Lokalizácia</div>
       <div class="table-card"><div class="locale-chips" id="locale-chips"></div></div>
@@ -650,8 +677,8 @@ function onSearch(q){
   q=q.toLowerCase();const results=[];
   (dashData?.users||[]).forEach(u=>{
     const n=u.display_name||shortId(u.id);
-    if(n.toLowerCase().includes(q)||u.id?.toLowerCase().includes(q)||(u.device_model||'').toLowerCase().includes(q))
-      results.push({label:n,sub:u.device_model||'',tag:'Používateľ',bg:'#3b82f620',fg:'var(--blue)'});
+    if(n.toLowerCase().includes(q)||u.id?.toLowerCase().includes(q)||(u.fullId||'').toLowerCase().includes(q)||(u.email||'').toLowerCase().includes(q)||(u.device_model||'').toLowerCase().includes(q))
+      results.push({label:n,sub:u.email||u.device_model||'',tag:'Používateľ',bg:'#3b82f620',fg:'var(--blue)'});
   });
   Object.keys(dashData?.byModel||{}).forEach(m=>{
     if(m.toLowerCase().includes(q))results.push({label:shortModel(m),sub:'',tag:'Model',bg:'#a855f720',fg:'var(--purple)'});
@@ -855,14 +882,79 @@ function renderTable(id,obj,fields,keyFn){
   tbody.innerHTML=rows.map(([k,v])=>`<tr><td>${keyFn?keyFn(k):k}</td>${fields.map(f=>`<td>${f==='cost'?fU(v[f]):fmt(v[f])}</td>`).join('')}</tr>`).join('')||'<tr><td colspan="5" class="empty">Žiadne dáta</td></tr>';
 }
 
+// Používatelia table filters (client-side, over the loaded rows)
+let userTblFilters={q:'',plan:'all',from:'',to:'',groupByDay:false};
+
+function applyUserTblFilters(users){
+  const f=userTblFilters;
+  return users.filter(u=>{
+    // Plan
+    if(f.plan!=='all'&&(u.plan||'')!==f.plan)return false;
+    // Text: email OR id (short+full) OR display name, case-insensitive substring
+    if(f.q){
+      const q=f.q.toLowerCase();
+      const hay=[u.email,u.id,u.fullId,u.display_name].filter(Boolean).join(' ').toLowerCase();
+      if(!hay.includes(q))return false;
+    }
+    // Registration date range (created_at), compared by calendar day
+    if(f.from||f.to){
+      if(!u.created_at)return false;
+      const day=String(u.created_at).slice(0,10);
+      if(f.from&&day<f.from)return false;
+      if(f.to&&day>f.to)return false;
+    }
+    return true;
+  });
+}
+
+function userRowHtml(u,pm){
+  const planBadge=p=>`<span class="badge badge-${p}">${p}</span>`;
+  // Prefer promo code from admin-stats (user.promo); fall back to the device map.
+  const promo=u.promo||pm.get(u.id);
+  return`<tr><td>${u.display_name||shortId(u.id)}</td><td>${u.email?`<span style="color:var(--text2)">${u.email}</span>`:'—'}</td><td>${u.device_model||'—'}</td><td>${u.os_version||'—'}</td><td>${u.app_version||'—'}</td><td>${u.locale||'—'}</td><td>${planBadge(u.plan||'trial')}</td><td>${promo?`<span class="badge badge-promo">${promo}</span>`:'—'}</td><td>${fmt(u.requests)}</td><td>${fU(u.cost)}</td><td>${fDate(u.last_seen_at)}</td></tr>`;
+}
+
 function renderUsers(users){
   const tbody=document.querySelector('#tbl-users tbody');
   const pm=getPromoDeviceMap();
-  const planBadge=p=>`<span class="badge badge-${p}">${p}</span>`;
-  tbody.innerHTML=users.sort((a,b)=>(b.cost||0)-(a.cost||0)).map(u=>{
-    const promo=pm.get(u.id);
-    return`<tr><td>${u.display_name||shortId(u.id)}</td><td>${u.device_model||'—'}</td><td>${u.os_version||'—'}</td><td>${u.app_version||'—'}</td><td>${u.locale||'—'}</td><td>${planBadge(u.plan||'trial')}</td><td>${promo?`<span class="badge badge-promo">${promo}</span>`:'—'}</td><td>${fmt(u.requests)}</td><td>${fU(u.cost)}</td><td>${fDate(u.last_seen_at)}</td></tr>`;
-  }).join('')||'<tr><td colspan="10" class="empty">Žiadni používatelia</td></tr>';
+  const filtered=applyUserTblFilters(users);
+  const cnt=document.getElementById('utf-count');
+  if(cnt)cnt.textContent=`${filtered.length} / ${users.length} používateľov`;
+  if(!filtered.length){tbody.innerHTML='<tr><td colspan="11" class="empty">Žiadni používatelia</td></tr>';return}
+  if(userTblFilters.groupByDay){
+    // Group by registration day (created_at), newest day first
+    const groups={};
+    filtered.forEach(u=>{const day=u.created_at?String(u.created_at).slice(0,10):'—';(groups[day]=groups[day]||[]).push(u)});
+    const days=Object.keys(groups).sort((a,b)=>b.localeCompare(a));
+    tbody.innerHTML=days.map(day=>{
+      const rows=groups[day].sort((a,b)=>(b.cost||0)-(a.cost||0));
+      const head=`<tr class="day-group"><td colspan="11">${day==='—'?'Bez dátumu registrácie':fDateShort(day)}<span class="day-count">${rows.length} ${rows.length===1?'používateľ':'používateľov'}</span></td></tr>`;
+      return head+rows.map(u=>userRowHtml(u,pm)).join('');
+    }).join('');
+  }else{
+    tbody.innerHTML=filtered.sort((a,b)=>(b.cost||0)-(a.cost||0)).map(u=>userRowHtml(u,pm)).join('');
+  }
+}
+
+function onUserTblFilter(){
+  userTblFilters.q=document.getElementById('utf-search').value.trim();
+  userTblFilters.plan=document.getElementById('utf-plan').value;
+  userTblFilters.from=document.getElementById('utf-from').value;
+  userTblFilters.to=document.getElementById('utf-to').value;
+  userTblFilters.groupByDay=document.getElementById('utf-groupday').checked;
+  document.getElementById('utf-group-toggle').classList.toggle('on',userTblFilters.groupByDay);
+  if(dashData)renderUsers(getOverviewUsers());
+}
+
+function clearUserTblFilters(){
+  userTblFilters={q:'',plan:'all',from:'',to:'',groupByDay:false};
+  document.getElementById('utf-search').value='';
+  document.getElementById('utf-plan').value='all';
+  document.getElementById('utf-from').value='';
+  document.getElementById('utf-to').value='';
+  document.getElementById('utf-groupday').checked=false;
+  document.getElementById('utf-group-toggle').classList.remove('on');
+  if(dashData)renderUsers(getOverviewUsers());
 }
 
 function renderUserDetail(){
@@ -1470,9 +1562,10 @@ function renderPromoDetail(){
 // ── EXPORT CSV ──
 function exportCSV(){
   if(!dashData)return;
-  const users=dashData.users||[],pm=getPromoDeviceMap();
-  let csv='Meno,Zariadenie,OS,App,Lokál,Plán,Promo,Requesty,Náklady,Posledná aktivita\n';
-  users.forEach(u=>{csv+=`"${u.display_name||shortId(u.id)}","${u.device_model||''}","${u.os_version||''}","${u.app_version||''}","${u.locale||''}","${u.plan||'trial'}","${pm.get(u.id)||''}",${u.requests||0},${(u.cost||0).toFixed(4)},"${fDate(u.last_seen_at)}"\n`});
+  // Export the currently visible (filtered) set so what you see is what you get.
+  const users=applyUserTblFilters(getOverviewUsers()),pm=getPromoDeviceMap();
+  let csv='Meno,Email,ID,Zariadenie,OS,App,Lokál,Plán,Promo,Requesty,Náklady,Registrácia,Posledná aktivita\n';
+  users.forEach(u=>{csv+=`"${u.display_name||shortId(u.id)}","${u.email||''}","${u.fullId||u.id||''}","${u.device_model||''}","${u.os_version||''}","${u.app_version||''}","${u.locale||''}","${u.plan||'trial'}","${u.promo||pm.get(u.id)||''}",${u.requests||0},${(u.cost||0).toFixed(4)},"${fDateShort(u.created_at)}","${fDate(u.last_seen_at)}"\n`});
   csv+='\nPromo kódy\nKód,Typ,Trvanie,Použité,Max,Poznámka,Stav\n';
   promoData.codes.forEach(c=>{const st=!c.is_active?'Neaktívny':c.used_count>=c.max_uses?'Vyčerpaný':'Aktívny';csv+=`"${c.code}","${c.benefit_type}",${c.duration_days},${c.used_count},${c.max_uses},"${c.note||''}","${st}"\n`});
   const blob=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8;'});
