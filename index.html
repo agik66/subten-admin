@@ -363,7 +363,7 @@ details.archive .table-card{margin-top:8px}
       </div>
 
       <div class="section-title">Predplatné</div>
-      <div class="table-card"><table id="tbl-subs"><thead><tr><th>Používateľ</th><th>Predplatné</th><th>Obnova / koniec</th><th>Krajina</th><th>Registrácia</th></tr></thead><tbody></tbody></table></div>
+      <div class="table-card"><table id="tbl-subs"><thead><tr><th>Používateľ</th><th>Predplatné</th><th>Dátum</th><th>Krajina</th><th>Registrácia</th></tr></thead><tbody></tbody></table></div>
 
       <div class="section-title">Krajiny</div>
       <div class="table-card"><table id="tbl-countries"><thead><tr><th>Krajina</th><th>Používatelia</th><th>Noví za 7 dní</th><th>Aktívni za 7 dní</th><th>Predplatné</th></tr></thead><tbody></tbody></table></div>
@@ -639,6 +639,7 @@ document.getElementById('period-bar').addEventListener('click',e=>{
 const allUsers=()=>dashData?.users||[];
 const realUsers=()=>allUsers().filter(u=>!u.internal);
 const isSubscriber=u=>u.status==='monthly'||u.status==='yearly';
+const isPaying=u=>isSubscriber(u)&&!u.inFreePeriod;
 const cameBack=u=>u.last_seen_at&&u.created_at&&new Date(u.last_seen_at)-new Date(u.created_at)>=864e5;
 const activeWithin=(u,days)=>u.last_seen_at&&new Date(u.last_seen_at)>=new Date(Date.now()-days*864e5);
 const createdWithin=(u,days)=>u.created_at&&new Date(u.created_at)>=new Date(Date.now()-days*864e5);
@@ -650,7 +651,7 @@ const STATUS={
   expired:{label:'Skončené',cls:'expired',color:'#5e5e72'},
   free:{label:'Zadarmo',cls:'free',color:'#f97316'}
 };
-const statusBadge=s=>{const x=STATUS[s]||STATUS.free;return`<span class="badge badge-${x.cls}">${x.label}</span>`};
+const statusBadge=(s,free)=>{const x=STATUS[s]||STATUS.free;return`<span class="badge badge-${free?'trial':x.cls}">${x.label}${free?' · skúška':''}</span>`};
 const userLabel=u=>esc(u.email||u.display_name||u.id);
 
 const adCampaigns=()=>(dashData?.ads?.campaigns||[]).filter(c=>c.network!=='codes');
@@ -729,7 +730,7 @@ function renderOverviewPage(){
   const new7=users.filter(u=>createdWithin(u,7)).length;
   const prev7=users.filter(u=>createdWithin(u,14)&&!createdWithin(u,7)).length;
   const act7=users.filter(u=>activeWithin(u,7)).length,act30=users.filter(u=>activeWithin(u,30)).length;
-  const subs=(r.yearly||0)+(r.monthly||0);
+  const paying=(r.yearly||0)+(r.monthly||0);
   const ads=sumRows(adRows()),acc=adAccounts();
   const first=adsFirstDay();
   const trend=new7>prev7?'up':new7<prev7?'down':'flat';
@@ -738,8 +739,8 @@ function renderOverviewPage(){
     <div class="kpi blue"><div class="kpi-label">Používatelia</div><div class="kpi-value">${total}</div><div class="kpi-sub">iOS ${ios} · Android ${android}${internal?` · bez ${internal} interných`:''}</div></div>
     <div class="kpi green"><div class="kpi-label">Noví za 7 dní</div><div class="kpi-value">${new7}</div><div class="kpi-sub">dnes ${today} · týždeň predtým ${prev7}</div><div class="kpi-trend ${trend}">${trend==='up'?'↑':trend==='down'?'↓':'→'}</div></div>
     <div class="kpi cyan"><div class="kpi-label">Aktívni za 7 dní</div><div class="kpi-value">${act7}</div><div class="kpi-sub">za 30 dní ${act30}</div></div>
-    <div class="kpi green"><div class="kpi-label">Predplatné</div><div class="kpi-value">${subs}</div><div class="kpi-sub">ročné ${r.yearly||0} · mesačné ${r.monthly||0}</div></div>
-    <div class="kpi purple"><div class="kpi-label">Príjem za mesiac (odhad)</div><div class="kpi-value">${fE(r.estimatedMonthlyEur||0)}</div><div class="kpi-sub">z cenníka, pred províziou a DPH</div></div>
+    <div class="kpi green"><div class="kpi-label">Platia</div><div class="kpi-value">${paying}</div><div class="kpi-sub">ročné ${r.yearly||0} · mesačné ${r.monthly||0} · v skúške zadarmo ${r.freePeriod||0}</div></div>
+    <div class="kpi purple"><div class="kpi-label">Príjem za mesiac (odhad)</div><div class="kpi-value">${fE(r.estimatedMonthlyEur||0)}</div><div class="kpi-sub">len platiaci, z cenníka, pred províziou a DPH</div></div>
     <div class="kpi orange"><div class="kpi-label">Reklama spolu</div><div class="kpi-value">${fE(ads.spend)}</div><div class="kpi-sub">${ads.installs} stiahnutí · ${fE(perUnit(ads.spend,ads.installs))} za jedno</div></div>
     <div class="kpi yellow"><div class="kpi-label">Reklama za nový účet</div><div class="kpi-value">${fE(perUnit(ads.spend,acc.users.length))}</div><div class="kpi-sub">${acc.users.length} nových účtov${first?` od ${fDay(first)}`:''}</div></div>
     <div class="kpi red"><div class="kpi-label">AI za 30 dní</div><div class="kpi-value">${fU(d.ai30d?.cost||0)}</div><div class="kpi-sub">${fmt(d.ai30d?.requests||0)} požiadaviek</div></div>
@@ -799,14 +800,22 @@ function renderOverviewCharts(users){
 }
 
 function renderSubscribers(users){
-  const rows=users.filter(u=>isSubscriber(u)||u.status==='byok').sort((a,b)=>String(a.premium_expires_at||'9').localeCompare(String(b.premium_expires_at||'9')));
-  const gift=users.filter(u=>u.status==='gift').length,ended=users.filter(u=>u.status==='expired').length;
+  // Platia, potom skúšky a nakoniec kúpené predplatné, ktoré už skončili
+  const order=u=>isPaying(u)?0:u.inFreePeriod?1:u.status==='byok'?2:3;
+  const rows=users.filter(u=>isSubscriber(u)||u.status==='byok'||(u.status==='expired'&&u.product))
+    .sort((a,b)=>(order(a)-order(b))||String(a.premium_expires_at||'9').localeCompare(String(b.premium_expires_at||'9')));
+  const gift=users.filter(u=>u.status==='gift').length;
+  const ended=users.filter(u=>u.status==='expired'&&!u.product).length;
   document.querySelector('#tbl-subs tbody').innerHTML=(rows.map(u=>{
     const left=daysFromNow(u.premium_expires_at);
-    const renew=u.status==='byok'?'<span class="muted">jednorazovo</span>':`${fDateShort(u.premium_expires_at)}<span class="cell-sub">o ${left} ${plural(left,'deň','dni','dní')}</span>`;
-    return`<tr><td>${userLabel(u)}</td><td>${statusBadge(u.status)}</td><td class="num">${renew}</td><td>${countryLabel(u.country)}</td><td class="num">${fDateShort(u.created_at)}</td></tr>`;
+    const plan=u.product&&u.product.endsWith('.yearly')?'Ročné':'Mesačné';
+    const badge=u.status==='expired'?`<span class="badge badge-expired">${plan} · skončené</span>`:statusBadge(u.status,u.inFreePeriod);
+    const when=u.status==='byok'?'<span class="muted">jednorazovo</span>'
+      :u.status==='expired'?`${fDateShort(u.premium_expires_at)}<span class="cell-sub">skončilo</span>`
+      :`${fDateShort(u.premium_expires_at)}<span class="cell-sub">${u.inFreePeriod?'prvá platba':'obnova'} o ${left} ${plural(left,'deň','dni','dní')}</span>`;
+    return`<tr><td>${userLabel(u)}</td><td>${badge}</td><td class="num">${when}</td><td>${countryLabel(u.country)}</td><td class="num">${fDateShort(u.created_at)}</td></tr>`;
   }).join('')||'<tr><td colspan="5" class="empty">Zatiaľ žiadne predplatné</td></tr>')+
-  `<tr><td colspan="5" class="muted">Darované ${gift} · skončené ${ended}</td></tr>`;
+  `<tr><td colspan="5" class="muted">Mimo tabuľky: darované ${gift} · staré testerské ${ended}</td></tr>`;
 }
 
 function renderCountries(users){
@@ -842,7 +851,7 @@ function renderCampaignsPage(){
     <div class="kpi blue"><div class="kpi-label">Stiahnutia</div><div class="kpi-value">${t.installs}</div><div class="kpi-sub">${fE(perUnit(t.spend,t.installs))} za jedno</div></div>
     <div class="kpi cyan"><div class="kpi-label">Ťuknutia</div><div class="kpi-value">${fmt(t.taps)}</div><div class="kpi-sub">${t.taps?fPct(t.installs/t.taps*100)+' z nich stiahlo':'—'}</div></div>
     <div class="kpi green"><div class="kpi-label">Nové účty od štartu</div><div class="kpi-value">${acc.users.length}</div><div class="kpi-sub">${fE(perUnit(t.spend,acc.users.length))} za jeden</div></div>
-    <div class="kpi purple"><div class="kpi-label">Vrátili sa</div><div class="kpi-value">${acc.users.filter(cameBack).length}</div><div class="kpi-sub">predplatné ${acc.users.filter(isSubscriber).length}</div></div>
+    <div class="kpi purple"><div class="kpi-label">Vrátili sa</div><div class="kpi-value">${acc.users.filter(cameBack).length}</div><div class="kpi-sub">predplatné ${acc.users.filter(isSubscriber).length}, z toho platia ${acc.users.filter(isPaying).length}</div></div>
   `;
 
   // Stav napojenia
@@ -918,7 +927,7 @@ function renderUsersPage(){
     <div class="kpi blue"><div class="kpi-label">Aktívni za 7 dní</div><div class="kpi-value">${act7}</div><div class="kpi-sub">${fPct(pct(act7))} zo všetkých</div></div>
     <div class="kpi cyan"><div class="kpi-label">Aktívni za 30 dní</div><div class="kpi-value">${act30}</div><div class="kpi-sub">${fPct(pct(act30))} zo všetkých</div></div>
     <div class="kpi orange"><div class="kpi-label">Vrátili sa</div><div class="kpi-value">${back}</div><div class="kpi-sub">aspoň o deň po registrácii, ${fPct(pct(back))}</div></div>
-    <div class="kpi purple"><div class="kpi-label">Predplatné</div><div class="kpi-value">${subs}</div><div class="kpi-sub">${fPct(pct(subs))} zo všetkých</div></div>
+    <div class="kpi purple"><div class="kpi-label">Platia</div><div class="kpi-value">${users.filter(isPaying).length}</div><div class="kpi-sub">predplatné spolu ${subs}, ${fPct(pct(subs))} zo všetkých</div></div>
   `;
 
   // Stav účtov
@@ -983,9 +992,9 @@ function visibleUsers(){
 }
 
 function userRowHtml(u){
-  const renew=isSubscriber(u)&&u.premium_expires_at?`<span class="cell-sub">do ${fDateShort(u.premium_expires_at)}</span>`:'';
+  const renew=isSubscriber(u)&&u.premium_expires_at?`<span class="cell-sub">${u.inFreePeriod?'prvá platba':'obnova'} ${fDateShort(u.premium_expires_at)}</span>`:'';
   const device=[u.platform==='ios'?'iOS':u.platform==='android'?'Android':null,u.os_version].filter(Boolean).map(esc).join(' ');
-  return`<tr><td>${userLabel(u)}${u.internal?' <span class="badge badge-free">interný</span>':''}${u.email&&u.display_name?`<span class="cell-sub">${esc(u.display_name)}</span>`:''}</td><td>${esc(u.device_model||'—')}<span class="cell-sub">${device||'—'}</span></td><td class="num">${esc(u.app_version||'—')}</td><td>${countryLabel(u.country)}</td><td>${statusBadge(u.status)}${renew}</td><td class="num">${fDateShort(u.created_at)}</td><td class="num">${fDate(u.last_seen_at)}</td><td class="num">${fmt(u.requests)}</td><td class="num">${fU(u.cost)}</td></tr>`;
+  return`<tr><td>${userLabel(u)}${u.internal?' <span class="badge badge-free">interný</span>':''}${u.email&&u.display_name?`<span class="cell-sub">${esc(u.display_name)}</span>`:''}</td><td>${esc(u.device_model||'—')}<span class="cell-sub">${device||'—'}</span></td><td class="num">${esc(u.app_version||'—')}</td><td>${countryLabel(u.country)}</td><td>${statusBadge(u.status,u.inFreePeriod)}${renew}</td><td class="num">${fDateShort(u.created_at)}</td><td class="num">${fDate(u.last_seen_at)}</td><td class="num">${fmt(u.requests)}</td><td class="num">${fU(u.cost)}</td></tr>`;
 }
 
 function renderUsers(){
