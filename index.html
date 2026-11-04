@@ -268,6 +268,35 @@ tr:hover td{background:var(--card2)}
 .map-legend-bar{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text2)}
 .map-legend-gradient{width:90px;height:6px;border-radius:3px}
 @media(max-width:700px){.map-layout{flex-direction:column}.map-sidebar{width:100%;max-height:200px;border-left:none;border-top:1px solid var(--border)}.map-layout .map-main{min-height:280px}}
+/* PLAN + NOTICES */
+@media(min-width:900px){#kpi-row{grid-template-columns:repeat(4,1fr)}}
+@media(max-width:700px){.kpi-row{grid-template-columns:repeat(2,minmax(0,1fr))}.kpi{padding:14px 14px}.kpi-value{font-size:22px}}
+.plan-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;margin-bottom:20px}
+.plan-top{display:flex;justify-content:space-between;align-items:baseline;gap:8px 16px;flex-wrap:wrap;margin-bottom:10px}
+.plan-title{font-size:14px;font-weight:700}
+.plan-val{font-size:13px;color:var(--text2)}
+.plan-val strong{color:var(--text);font-size:20px;font-weight:700;margin-right:4px}
+.plan-bar{position:relative;height:10px;border-radius:5px;background:var(--card2);overflow:hidden}
+.plan-bar i{display:block;height:100%;border-radius:5px;background:var(--orange);transition:width .4s}
+.plan-note{font-size:12px;color:var(--text3);margin-top:10px;line-height:1.5}
+.notice{font-size:13px;color:var(--text2);line-height:1.55;background:var(--card);border:1px solid var(--border);border-left:3px solid var(--blue);border-radius:10px;padding:12px 16px;margin-bottom:16px}
+.notice.warn{border-left-color:var(--yellow)}
+.notice.err{border-left-color:var(--red)}
+.notice strong{color:var(--text)}
+.table-note{font-size:12px;color:var(--text3);margin:-10px 0 20px;line-height:1.5}
+.links-row{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 28px}
+.links-row a{font-size:12px;color:var(--text2);text-decoration:none;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:7px 12px}
+.links-row a:hover{color:var(--text);border-color:var(--border2)}
+.num{font-variant-numeric:tabular-nums;white-space:nowrap}
+.muted{color:var(--text3)}
+.cell-sub{display:block;font-size:11px;color:var(--text3);margin-top:2px}
+.badge-paused{background:#eab30820;color:var(--yellow)}
+.badge-free{background:var(--card2);color:var(--text2)}
+tr.total td{font-weight:700;border-top:1px solid var(--border2)}
+.fb-msg{max-width:560px;white-space:normal;line-height:1.45}
+details.archive{margin-bottom:20px}
+details.archive summary{cursor:pointer;font-size:13px;color:var(--text2);padding:8px 0}
+details.archive .table-card{margin-top:8px}
 </style>
 </head>
 <body>
@@ -301,11 +330,6 @@ tr:hover td{background:var(--card2)}
     <div class="header">
       <div class="header-left">
         <h1>Subten Admin</h1>
-        <div class="search-wrap">
-          <span class="s-icon">🔍</span>
-          <input type="text" id="global-search" placeholder="Hľadať..." oninput="onSearch(this.value)" onfocus="onSearch(this.value)" onblur="setTimeout(()=>document.getElementById('search-results').classList.remove('show'),200)">
-          <div class="search-results" id="search-results"></div>
-        </div>
       </div>
       <div class="header-right">
         <span class="ts" id="last-updated"></span>
@@ -321,49 +345,104 @@ tr:hover td{background:var(--card2)}
     <!-- TAB NAVIGATION -->
     <div class="tab-nav">
       <button class="tab-btn active" onclick="switchTab('overview')">📊 Prehľad</button>
-      <button class="tab-btn" onclick="switchTab('growth')">📈 Rast & Kampane</button>
-      <button class="tab-btn" onclick="switchTab('promo')">🎟️ Promo & Marketing</button>
+      <button class="tab-btn" onclick="switchTab('campaigns')">📣 Kampane a kódy</button>
+      <button class="tab-btn" onclick="switchTab('users')">👥 Používatelia</button>
+      <button class="tab-btn" onclick="switchTab('ai')">🤖 AI náklady</button>
     </div>
 
     <!-- ═══════════════════════════════════ -->
-    <!-- PAGE 1: PREHĽAD (existing)         -->
+    <!-- PAGE 1: PREHĽAD                    -->
     <!-- ═══════════════════════════════════ -->
     <div class="tab-page active" id="page-overview">
-
-      <!-- FILTERS -->
-      <div class="filter-row">
-        <div class="period-bar" id="period-bar">
-          <button class="period-btn" data-days="0">Dnes</button>
-          <button class="period-btn" data-days="7">7 dní</button>
-          <button class="period-btn" data-days="30">30 dní</button>
-          <button class="period-btn" data-days="90">90 dní</button>
-          <button class="period-btn" data-days="365">Rok</button>
-          <button class="period-btn active" data-days="all">Všetko</button>
-        </div>
-        <div class="promo-filter">
-          <select id="user-filter-select" onchange="onUserFilter(this.value)">
-            <option value="all">👤 Všetci používatelia</option>
-          </select>
-        </div>
-        <button class="btn-sm" id="user-filter-clear" style="display:none" onclick="onUserFilter('all');document.getElementById('user-filter-select').value='all'">✕ Zrušiť filter</button>
-      </div>
-
       <div class="kpi-row" id="kpi-row"></div>
-      <div class="user-detail" id="user-detail"></div>
-      <div class="credit-row" id="credit-row"></div>
+      <div class="plan-card" id="plan-card"></div>
 
       <div class="charts-grid">
-        <div class="chart-card"><h3>Denný trend — Náklady (USD)</h3><canvas id="chart-daily-cost"></canvas></div>
-        <div class="chart-card"><h3>Denný trend — Requesty</h3><canvas id="chart-daily-req"></canvas></div>
-        <div class="chart-card"><h3>Náklady podľa modelu</h3><canvas id="chart-model"></canvas></div>
-        <div class="chart-card"><h3>Requesty podľa tasku</h3><canvas id="chart-task"></canvas></div>
+        <div class="chart-card"><h3>Noví používatelia a reklama (30 dní)</h3><canvas id="chart-new-daily"></canvas></div>
+        <div class="chart-card"><h3>Používatelia spolu</h3><canvas id="chart-cumul"></canvas></div>
       </div>
 
-      <div class="chart-card" style="margin-bottom:20px"><h3>🔮 Predikcia nákladov (30 dní)</h3><canvas id="chart-predict"></canvas></div>
-      <div class="chart-card" style="margin-bottom:20px"><h3>📊 Pareto — Top API spotrebitelia</h3><canvas id="chart-pareto"></canvas></div>
+      <div class="section-title">Predplatné</div>
+      <div class="table-card"><table id="tbl-subs"><thead><tr><th>Používateľ</th><th>Predplatné</th><th>Obnova / koniec</th><th>Krajina</th><th>Registrácia</th></tr></thead><tbody></tbody></table></div>
 
-      <div class="section-title">Aktivita používateľov</div>
-      <div class="engage-row" id="engage-row"></div>
+      <div class="section-title">Krajiny</div>
+      <div class="table-card"><table id="tbl-countries"><thead><tr><th>Krajina</th><th>Používatelia</th><th>Noví za 7 dní</th><th>Aktívni za 7 dní</th><th>Predplatné</th></tr></thead><tbody></tbody></table></div>
+
+      <div class="section-title">Spätná väzba</div>
+      <div class="table-card"><table id="tbl-feedback"><thead><tr><th>Dátum</th><th>Typ</th><th>Správa</th><th>Verzia</th></tr></thead><tbody></tbody></table></div>
+
+      <div class="section-title">Rýchle odkazy</div>
+      <div class="links-row" id="links-row"></div>
+    </div>
+
+    <!-- ═══════════════════════════════════ -->
+    <!-- PAGE 2: KAMPANE A KÓDY             -->
+    <!-- ═══════════════════════════════════ -->
+    <div class="tab-page" id="page-campaigns">
+      <div class="kpi-row" id="kpi-ads-row"></div>
+      <div id="ads-sync-notice"></div>
+
+      <div class="section-title">Reklamné kampane</div>
+      <div class="table-card"><table id="tbl-ad-campaigns"><thead><tr><th>Kampaň</th><th>Stav</th><th>Termín</th><th>Denný strop</th><th>Zobrazenia</th><th>Ťuknutia</th><th>Stiahnutia</th><th>Minuté</th><th>Za stiahnutie</th></tr></thead><tbody></tbody></table></div>
+      <div id="ad-networks"></div>
+
+      <div class="section-title">Čo reklama priniesla</div>
+      <div class="table-card"><table id="tbl-ad-countries"><thead><tr><th>Krajina</th><th>Minuté</th><th>Stiahnutia</th><th>Nové účty od štartu</th><th>Vrátili sa</th><th>Predplatné</th><th>Za nový účet</th></tr></thead><tbody></tbody></table></div>
+      <div class="table-note">Účty priraďujeme podľa krajiny a dátumu registrácie. Appka nevie, z ktorej kampane konkrétny človek prišiel, takže časť účtov môže byť aj bez reklamy.</div>
+
+      <div class="section-title">Kódy</div>
+      <div id="codes-live"></div>
+      <details class="archive" id="codes-archive-wrap">
+        <summary id="codes-archive-title">Staré kódy</summary>
+        <div class="notice warn">Tieto kódy súčasné verzie appiek nevedia uplatniť. Kódy pre kluby a creatorov budú Apple offer kódy a Google Play promo kódy.</div>
+        <div class="table-card"><table id="tbl-codes"><thead><tr><th>Kód</th><th>Trvanie</th><th>Použité</th><th>Stav</th><th>Poznámka</th></tr></thead><tbody></tbody></table></div>
+      </details>
+    </div>
+
+    <!-- ═══════════════════════════════════ -->
+    <!-- PAGE 3: POUŽÍVATELIA               -->
+    <!-- ═══════════════════════════════════ -->
+    <div class="tab-page" id="page-users">
+      <div class="kpi-row" id="kpi-users-row"></div>
+
+      <div class="charts-grid">
+        <div class="chart-card"><h3>Stav účtov</h3><canvas id="chart-status"></canvas></div>
+        <div class="chart-card"><h3>Lievik</h3><div id="funnel-visual"></div></div>
+      </div>
+
+      <div class="section-title">Týždne podľa registrácie</div>
+      <div class="table-card" id="cohort-table-wrap"></div>
+
+      <div class="section-title">Všetci používatelia</div>
+      <div class="utf-bar">
+        <input type="text" id="utf-search" placeholder="Hľadať email, ID alebo meno…" oninput="onUserTblFilter()">
+        <label class="field">Stav
+          <select id="utf-status" onchange="onUserTblFilter()">
+            <option value="all">Všetky</option>
+            <option value="yearly">Ročné</option>
+            <option value="monthly">Mesačné</option>
+            <option value="byok">Vlastný kľúč</option>
+            <option value="gift">Darované</option>
+            <option value="expired">Skončené</option>
+            <option value="free">Zadarmo</option>
+          </select>
+        </label>
+        <label class="field">Platforma
+          <select id="utf-platform" onchange="onUserTblFilter()">
+            <option value="all">Všetky</option>
+            <option value="ios">iOS</option>
+            <option value="android">Android</option>
+          </select>
+        </label>
+        <label class="field">Krajina <select id="utf-country" onchange="onUserTblFilter()"><option value="all">Všetky</option></select></label>
+        <label class="field">Reg. od <input type="date" id="utf-from" onchange="onUserTblFilter()"></label>
+        <label class="field">do <input type="date" id="utf-to" onchange="onUserTblFilter()"></label>
+        <label class="utf-toggle" id="utf-internal-toggle"><input type="checkbox" id="utf-internal" onchange="onUserTblFilter()">Aj interné</label>
+        <label class="utf-toggle" id="utf-group-toggle"><input type="checkbox" id="utf-groupday" onchange="onUserTblFilter()">Zoskupiť po dňoch</label>
+        <button class="btn-sm" onclick="clearUserTblFilters()">✕ Vyčistiť</button>
+        <span class="utf-count" id="utf-count"></span>
+      </div>
+      <div class="table-card"><table id="tbl-users"><thead><tr><th>Používateľ</th><th>Zariadenie</th><th>App</th><th>Krajina</th><th>Stav</th><th>Registrácia</th><th>Posledná aktivita</th><th>AI požiadavky</th><th>AI náklady</th></tr></thead><tbody></tbody></table></div>
 
       <!-- GEO MAP (Power BI style) -->
       <div class="section-title">🌍 Mapa používateľov</div>
@@ -397,108 +476,35 @@ tr:hover td{background:var(--card2)}
           </div>
         </div>
       </div>
-
-      <div class="section-title">Modely</div>
-      <div class="table-card"><table id="tbl-models"><thead><tr><th>Model</th><th>Requesty</th><th>Prompt</th><th>Completion</th><th>Náklady</th></tr></thead><tbody></tbody></table></div>
-
-      <div class="section-title">Tasky</div>
-      <div class="table-card"><table id="tbl-tasks"><thead><tr><th>Task</th><th>Requesty</th><th>Prompt</th><th>Completion</th><th>Náklady</th></tr></thead><tbody></tbody></table></div>
-
-      <div class="section-title">Používatelia</div>
-      <div class="utf-bar">
-        <input type="text" id="utf-search" placeholder="Hľadať email, ID alebo meno…" oninput="onUserTblFilter()">
-        <label class="field">Plán
-          <select id="utf-plan" onchange="onUserTblFilter()">
-            <option value="all">Všetky</option>
-            <option value="premium">premium</option>
-            <option value="trial">trial</option>
-            <option value="free">free</option>
-          </select>
-        </label>
-        <label class="field">Reg. od <input type="date" id="utf-from" onchange="onUserTblFilter()"></label>
-        <label class="field">do <input type="date" id="utf-to" onchange="onUserTblFilter()"></label>
-        <label class="utf-toggle" id="utf-group-toggle"><input type="checkbox" id="utf-groupday" onchange="onUserTblFilter()">Zoskupiť po dňoch</label>
-        <button class="btn-sm" onclick="clearUserTblFilters()">✕ Vyčistiť</button>
-        <span class="utf-count" id="utf-count"></span>
-      </div>
-      <div class="table-card"><table id="tbl-users"><thead><tr><th>Meno/ID</th><th>Email</th><th>Zariadenie</th><th>OS</th><th>App</th><th>Lokál</th><th>Plán</th><th>Promo</th><th>Requesty</th><th>Náklady</th><th>Posledná aktivita</th></tr></thead><tbody></tbody></table></div>
-
-      <div class="section-title">Lokalizácia</div>
-      <div class="table-card"><div class="locale-chips" id="locale-chips"></div></div>
-
-      <div class="section-title">Cenník modelov</div>
-      <div class="table-card"><table id="tbl-pricing"><thead><tr><th>Model</th><th>Prompt / 1M</th><th>Completion / 1M</th></tr></thead><tbody></tbody></table></div>
     </div>
 
     <!-- ═══════════════════════════════════ -->
-    <!-- PAGE 2: RAST & KAMPANE             -->
+    <!-- PAGE 4: AI NÁKLADY                 -->
     <!-- ═══════════════════════════════════ -->
-    <div class="tab-page" id="page-growth">
-
-      <!-- GROWTH KPIs -->
-      <div class="kpi-row" id="kpi-growth-row"></div>
-
-      <!-- REGISTRATION TIMELINE -->
-      <div class="charts-grid">
-        <div class="chart-card"><h3>📈 Noví používatelia — denný trend</h3><canvas id="chart-reg-daily"></canvas></div>
-        <div class="chart-card"><h3>👥 Kumulatívny rast</h3><canvas id="chart-reg-cumul"></canvas></div>
-      </div>
-
-      <!-- PLAN DISTRIBUTION + CONVERSION FUNNEL -->
-      <div class="charts-grid">
-        <div class="chart-card"><h3>📊 Rozdelenie plánov</h3><canvas id="chart-plan-dist"></canvas></div>
-        <div class="chart-card"><h3>🔄 Konverzný lievik</h3><div id="funnel-visual"></div></div>
-      </div>
-
-      <!-- RETENTION -->
-      <div class="section-title">🔥 Retencia</div>
-      <div class="kpi-row" id="kpi-retention-row"></div>
-
-      <!-- CAMPAIGN SOURCE -->
-      <div class="section-title">📣 Kampane — zdroj akvizície</div>
-      <div class="table-card"><table id="tbl-campaigns"><thead><tr><th>Zdroj / Kampaň</th><th>Používatelia</th><th>Konverzia na Premium</th><th>Requesty</th><th>Náklady</th><th>Ø Náklady/user</th><th>Retencia 7d</th></tr></thead><tbody></tbody></table></div>
-
-      <!-- WEEKLY COHORTS -->
-      <div class="section-title">📅 Týždenné kohorty</div>
-      <div class="table-card" id="cohort-table-wrap"></div>
-
-      <!-- GROWTH USERS TABLE -->
-      <div class="section-title">🆕 Najnovší používatelia</div>
-      <div class="table-card"><table id="tbl-new-users"><thead><tr><th>Meno/ID</th><th>Zariadenie</th><th>Plán</th><th>Zdroj</th><th>Registrácia</th><th>Posledná aktivita</th><th>Requesty</th><th>Náklady</th></tr></thead><tbody></tbody></table></div>
-    </div>
-
-    <!-- ═══════════════════════════════════ -->
-    <!-- PAGE 3: PROMO & MARKETING          -->
-    <!-- ═══════════════════════════════════ -->
-    <div class="tab-page" id="page-promo">
-
-      <!-- PROMO FILTER -->
+    <div class="tab-page" id="page-ai">
       <div class="filter-row">
-        <div class="promo-filter">
-          <select id="promo-filter-select" onchange="onPromoFilter(this.value)">
-            <option value="all">Všetci používatelia</option>
-            <option value="promo-only">Len z promo kódov</option>
-          </select>
+        <div class="period-bar" id="period-bar">
+          <button class="period-btn" data-days="7">7 dní</button>
+          <button class="period-btn active" data-days="30">30 dní</button>
+          <button class="period-btn" data-days="90">90 dní</button>
+          <button class="period-btn" data-days="all">Všetko</button>
         </div>
       </div>
+      <div class="kpi-row" id="kpi-ai-row"></div>
+      <div id="ai-notice"></div>
 
-      <!-- PROMO KPIs -->
-      <div class="kpi-row" id="kpi-promo-row"></div>
+      <div class="charts-grid">
+        <div class="chart-card"><h3>Náklady po dňoch (USD)</h3><canvas id="chart-daily-cost"></canvas></div>
+        <div class="chart-card"><h3>Požiadavky po dňoch</h3><canvas id="chart-daily-req"></canvas></div>
+        <div class="chart-card"><h3>Náklady podľa modelu</h3><canvas id="chart-model"></canvas></div>
+        <div class="chart-card"><h3>Požiadavky podľa úlohy</h3><canvas id="chart-task"></canvas></div>
+      </div>
 
-      <!-- PROMO CODE CARDS -->
-      <div class="section-title">🎟️ Promo kódy</div>
-      <div class="promo-grid" id="promo-grid"></div>
+      <div class="section-title">Modely</div>
+      <div class="table-card"><table id="tbl-models"><thead><tr><th>Model</th><th>Požiadavky</th><th>Vstup</th><th>Výstup</th><th>Náklady</th></tr></thead><tbody></tbody></table></div>
 
-      <!-- PROMO TIMELINE -->
-      <div class="chart-card" style="margin-bottom:20px"><h3>📈 Redemptions — časová os</h3><canvas id="chart-promo-timeline"></canvas></div>
-
-      <!-- PROMO USERS FILTERED -->
-      <div class="section-title">👥 Používatelia z promo kódov</div>
-      <div class="table-card"><table id="tbl-promo-users"><thead><tr><th>Meno/ID</th><th>Zariadenie</th><th>Promo kód</th><th>Plán</th><th>Requesty</th><th>Náklady</th><th>Posledná aktivita</th></tr></thead><tbody></tbody></table></div>
-
-      <!-- PROMO DETAIL TABLE -->
-      <div class="section-title">📋 Promo kódy — detail</div>
-      <div class="table-card"><table id="tbl-promo"><thead><tr><th>Kód</th><th>Typ</th><th>Trvanie</th><th>Použité</th><th>Max</th><th>Využitie</th><th>Poznámka</th><th>Stav</th><th>Vytvorený</th><th>Expirácia</th></tr></thead><tbody></tbody></table></div>
+      <div class="section-title">Úlohy</div>
+      <div class="table-card"><table id="tbl-tasks"><thead><tr><th>Úloha</th><th>Požiadavky</th><th>Vstup</th><th>Výstup</th><th>Náklady</th></tr></thead><tbody></tbody></table></div>
     </div>
 
   </div>
@@ -511,22 +517,27 @@ const REDIRECT_URL=window.location.origin+window.location.pathname;
 const sb=supabase.createClient(SB_URL,SB_KEY);
 
 let charts={};
-let currentPeriod='all';
-let currentPromoFilter='all';
-let currentUserFilter='all';
+let currentPeriod='30';
+let activeTab='overview';
 let dashData=null;
-let promoData={codes:[],redemptions:[]};
+let lastLoadedAt=0;
+let mapDrawn=false;
+const AUTO_REFRESH_MS=5*60*1000;
 
 // ── FORMATTERS ──
-const fmt=n=>{if(n==null)return'0';if(n>=1e6)return(n/1e6).toFixed(1)+'M';if(n>=1e3)return(n/1e3).toFixed(1)+'k';return Number(n).toLocaleString('sk-SK')};
-const fU=n=>n==null?'$0.00':'$'+Number(n).toFixed(4);
-const fE=n=>n==null?'0.00 €':Number(n).toFixed(2)+' €';
-const fPct=n=>Number(n||0).toFixed(1)+'%';
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt=n=>{if(n==null)return'0';if(n>=1e6)return(n/1e6).toFixed(1)+'M';if(n>=1e4)return(n/1e3).toFixed(1)+'k';return Number(n).toLocaleString('sk-SK')};
+const fU=n=>{if(n==null)return'—';const v=Number(n);return'$'+(Math.abs(v)<1?v.toFixed(4):v.toFixed(2))};
+const fE=n=>n==null||!isFinite(n)?'—':Number(n).toLocaleString('sk-SK',{minimumFractionDigits:2,maximumFractionDigits:2})+' €';
+const fPct=n=>Number(n||0).toFixed(0)+' %';
 const shortModel=m=>{const p=(m||'').split('/');return p.length>1?p[1]:m};
-const shortId=id=>(id||'').substring(0,8);
 const fDate=d=>{if(!d)return'—';const dt=new Date(d);return dt.toLocaleDateString('sk-SK')+' '+dt.toLocaleTimeString('sk-SK',{hour:'2-digit',minute:'2-digit'})};
 const fDateShort=d=>{if(!d)return'—';return new Date(d).toLocaleDateString('sk-SK')};
-const daysFromNow=d=>{if(!d)return null;return Math.ceil((new Date(d)-new Date())/(864e5))};
+const fDay=d=>{if(!d)return'—';const dt=new Date(d);return dt.getDate()+'. '+(dt.getMonth()+1)+'.'};
+const daysFromNow=d=>{if(!d)return null;return Math.ceil((new Date(d)-new Date())/864e5)};
+const dayKey=d=>new Date(d).toLocaleDateString('sv');
+const todayKey=()=>new Date().toLocaleDateString('sv');
+const plural=(n,a,b,c)=>n===1?a:(n>=2&&n<=4?b:c);
 
 // ── AUTH ──
 async function checkAuth(){
@@ -561,19 +572,24 @@ async function logout(){await sb.auth.signOut();location.reload()}
 
 // ── TAB SWITCHING ──
 function switchTab(name){
+  activeTab=name;
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
   document.querySelectorAll('.tab-page').forEach(p=>p.classList.remove('active'));
-  document.querySelector(`[onclick="switchTab('${name}')"]`).classList.add('active');
+  const btn=document.querySelector(`[onclick="switchTab('${name}')"]`);
+  btn.classList.add('active');
+  // Na mobile je tab-nav horizontálne scrollovateľný — dotiahni aktívny tab do zorného poľa
+  if(btn.scrollIntoView)btn.scrollIntoView({block:'nearest',inline:'nearest'});
   document.getElementById('page-'+name).classList.add('active');
-  // Re-render charts when switching to promo tab (canvas resize fix)
-  if(name==='promo'&&dashData)renderPromoPage();
-  if(name==='growth'&&dashData)renderGrowthPage();
+  // Grafy sa kreslia až na viditeľnej záložke (v skrytej by mali nulovú veľkosť)
+  if(dashData)renderActiveTab();
 }
 
 // ── LOAD ALL ──
-async function loadAll(){
-  document.getElementById('loading').style.display='flex';
-  document.getElementById('dash-content').style.display='none';
+async function loadAll({silent=false}={}){
+  if(!silent){
+    document.getElementById('loading').style.display='flex';
+    document.getElementById('dash-content').style.display='none';
+  }
   try{
     const{data:{session}}=await sb.auth.getSession();
     if(!session)return checkAuth();
@@ -582,26 +598,33 @@ async function loadAll(){
       const from=new Date();from.setDate(from.getDate()-Number(currentPeriod));
       url+='?from='+from.toISOString().split('T')[0];
     }
-    const[statsRes,pcRes,prRes]=await Promise.all([
-      fetch(url,{headers:{'Authorization':'Bearer '+session.access_token,'apikey':SB_KEY}}),
-      sb.from('promo_codes').select('*').order('created_at',{ascending:true}),
-      sb.from('promo_redemptions').select('*').order('redeemed_at',{ascending:true})
-    ]);
-    if(!statsRes.ok)throw new Error('HTTP '+statsRes.status);
-    dashData=await statsRes.json();
-    promoData.codes=pcRes.data||[];
-    promoData.redemptions=prRes.data||[];
-    populatePromoFilter();
-    populateUserFilter();
+    const res=await fetch(url,{headers:{'Authorization':'Bearer '+session.access_token,'apikey':SB_KEY}});
+    if(res.status===403)throw new Error('Tento účet nemá prístup do panela.');
+    if(!res.ok)throw new Error('HTTP '+res.status);
+    dashData=await res.json();
+    lastLoadedAt=Date.now();
     document.getElementById('loading').style.display='none';
     document.getElementById('dash-content').style.display='block';
+    if(!silent)mapDrawn=false;
     renderAll();
   }catch(e){
     console.error(e);
-    document.getElementById('loading').innerHTML='<span style="color:var(--red)">Chyba: '+e.message+'</span><button class="btn-sm primary" style="margin-top:12px" onclick="loadAll()">Skúsiť znova</button>';
+    if(silent&&dashData){
+      document.getElementById('last-updated').textContent='Obnova zlyhala: '+e.message;
+      return;
+    }
+    const box=document.getElementById('loading');
+    box.style.display='flex';
+    box.innerHTML='<span style="color:var(--red)">Chyba: '+esc(e.message)+'</span><button class="btn-sm primary" style="margin-top:12px" onclick="loadAll()">Skúsiť znova</button>';
   }
 }
 function refresh(){loadAll()}
+
+// Panel otvorený na obrazovke sa obnovuje sám, schovaný nič nesťahuje
+setInterval(()=>{if(dashData&&document.visibilityState==='visible')loadAll({silent:true})},AUTO_REFRESH_MS);
+document.addEventListener('visibilitychange',()=>{
+  if(dashData&&document.visibilityState==='visible'&&Date.now()-lastLoadedAt>AUTO_REFRESH_MS)loadAll({silent:true});
+});
 
 // ── PERIOD FILTER ──
 document.getElementById('period-bar').addEventListener('click',e=>{
@@ -609,297 +632,349 @@ document.getElementById('period-bar').addEventListener('click',e=>{
   document.querySelectorAll('.period-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
   currentPeriod=btn.dataset.days;
-  loadAll();
+  loadAll({silent:true});
 });
 
-// ── PROMO FILTER ──
-function populatePromoFilter(){
-  const sel=document.getElementById('promo-filter-select');
-  const cur=sel.value;
-  sel.innerHTML='<option value="all">Všetci používatelia</option><option value="promo-only">Len z promo kódov</option>';
-  promoData.codes.forEach(c=>{sel.innerHTML+=`<option value="code:${c.id}">${c.code}</option>`});
-  sel.value=cur;
-}
-function onPromoFilter(v){currentPromoFilter=v;if(dashData)renderPromoPage()}
-function getPromoDeviceMap(){
-  const m=new Map();
-  promoData.redemptions.forEach(r=>{
-    const c=promoData.codes.find(x=>x.id===r.code_id);
-    if(c)m.set(r.device_id,c.code);
-  });
-  return m;
-}
-function getFilteredUsers(){
-  const users=dashData.users||[];
-  const map=getPromoDeviceMap();
-  if(currentPromoFilter==='all')return users;
-  if(currentPromoFilter==='promo-only')return users.filter(u=>map.has(u.id));
-  if(currentPromoFilter.startsWith('code:')){
-    const cid=currentPromoFilter.split(':')[1];
-    const devs=new Set(promoData.redemptions.filter(r=>r.code_id===cid).map(r=>r.device_id));
-    return users.filter(u=>devs.has(u.id));
-  }
-  return users;
+// ── DATA HELPERS ──
+const allUsers=()=>dashData?.users||[];
+const realUsers=()=>allUsers().filter(u=>!u.internal);
+const isSubscriber=u=>u.status==='monthly'||u.status==='yearly';
+const cameBack=u=>u.last_seen_at&&u.created_at&&new Date(u.last_seen_at)-new Date(u.created_at)>=864e5;
+const activeWithin=(u,days)=>u.last_seen_at&&new Date(u.last_seen_at)>=new Date(Date.now()-days*864e5);
+const createdWithin=(u,days)=>u.created_at&&new Date(u.created_at)>=new Date(Date.now()-days*864e5);
+const STATUS={
+  yearly:{label:'Ročné',cls:'premium',color:'#22c55e'},
+  monthly:{label:'Mesačné',cls:'premium',color:'#14b8a6'},
+  byok:{label:'Vlastný kľúč',cls:'byok',color:'#3b82f6'},
+  gift:{label:'Darované',cls:'promo',color:'#a855f7'},
+  expired:{label:'Skončené',cls:'expired',color:'#5e5e72'},
+  free:{label:'Zadarmo',cls:'free',color:'#f97316'}
+};
+const statusBadge=s=>{const x=STATUS[s]||STATUS.free;return`<span class="badge badge-${x.cls}">${x.label}</span>`};
+const userLabel=u=>esc(u.email||u.display_name||u.id);
+
+const adCampaigns=()=>(dashData?.ads?.campaigns||[]).filter(c=>c.network!=='codes');
+const adRows=()=>dashData?.ads?.rows||[];
+const sumRows=rows=>rows.reduce((t,r)=>({impressions:t.impressions+(r.impressions||0),taps:t.taps+(r.taps||0),installs:t.installs+(r.installs||0),spend:t.spend+Number(r.spend||0)}),{impressions:0,taps:0,installs:0,spend:0});
+const campaignState=c=>c.end_date&&c.end_date<todayKey()?'ended':(c.status||'running');
+const CAMPAIGN_STATE={running:['Beží','active'],paused:['Pozastavená','paused'],on_hold:['Čaká','paused'],ended:['Skončená','expired']};
+const adsFirstDay=()=>adCampaigns().map(c=>c.start_date).filter(Boolean).sort()[0]||null;
+const adsDataUntil=()=>adRows().map(r=>r.period_end).filter(Boolean).sort().pop()||null;
+const perUnit=(spend,n)=>n>0?spend/n:null;
+
+// Účty z krajín, kde beží reklama, od začiatku prvej kampane v danej krajine
+function adAccounts(){
+  const firstByCountry={};
+  adCampaigns().forEach(c=>(c.countries||[]).forEach(cc=>{
+    if(c.start_date&&(!firstByCountry[cc]||c.start_date<firstByCountry[cc]))firstByCountry[cc]=c.start_date;
+  }));
+  return{firstByCountry,users:realUsers().filter(u=>firstByCountry[u.country]&&dayKey(u.created_at)>=firstByCountry[u.country])};
 }
 
-// ── USER FILTER ──
-function populateUserFilter(){
-  const sel=document.getElementById('user-filter-select');
-  const cur=sel.value;
-  sel.innerHTML='<option value="all">👤 Všetci používatelia</option>';
-  const users=(dashData?.users||[]).sort((a,b)=>(b.cost||0)-(a.cost||0));
-  users.forEach(u=>{
-    const name=u.display_name||shortId(u.id);
-    const plan=u.plan||'trial';
-    sel.innerHTML+=`<option value="${u.id}">${name} (${plan} · ${fU(u.cost)})</option>`;
-  });
-  sel.value=cur;
-}
-function onUserFilter(v){
-  currentUserFilter=v;
-  document.getElementById('user-filter-clear').style.display=v==='all'?'none':'inline-flex';
-  if(dashData)renderOverviewPage();
-}
-function closeUserDetail(){
-  onUserFilter('all');
-  document.getElementById('user-filter-select').value='all';
-}
-function getOverviewUsers(){
-  const users=dashData?.users||[];
-  if(currentUserFilter==='all')return users;
-  return users.filter(u=>u.id===currentUserFilter);
-}
-
-// ── SEARCH ──
-function onSearch(q){
-  const box=document.getElementById('search-results');
-  if(!q||q.length<2){box.classList.remove('show');return}
-  q=q.toLowerCase();const results=[];
-  (dashData?.users||[]).forEach(u=>{
-    const n=u.display_name||shortId(u.id);
-    if(n.toLowerCase().includes(q)||u.id?.toLowerCase().includes(q)||(u.fullId||'').toLowerCase().includes(q)||(u.email||'').toLowerCase().includes(q)||(u.device_model||'').toLowerCase().includes(q))
-      results.push({label:n,sub:u.email||u.device_model||'',tag:'Používateľ',bg:'#3b82f620',fg:'var(--blue)'});
-  });
-  Object.keys(dashData?.byModel||{}).forEach(m=>{
-    if(m.toLowerCase().includes(q))results.push({label:shortModel(m),sub:'',tag:'Model',bg:'#a855f720',fg:'var(--purple)'});
-  });
-  Object.keys(dashData?.byTask||{}).forEach(t=>{
-    if(t.toLowerCase().includes(q))results.push({label:t,sub:'',tag:'Task',bg:'#06b6d420',fg:'var(--cyan)'});
-  });
-  promoData.codes.forEach(c=>{
-    if(c.code.toLowerCase().includes(q)||(c.note||'').toLowerCase().includes(q))
-      results.push({label:c.code,sub:c.note||'',tag:'Promo',bg:'#f9731620',fg:'var(--orange)'});
-  });
-  box.innerHTML=results.length?results.slice(0,10).map(r=>`<div class="sr-item"><div><strong>${r.label}</strong>${r.sub?' — '+r.sub:''}</div><span class="sr-tag" style="background:${r.bg};color:${r.fg}">${r.tag}</span></div>`).join(''):'<div class="sr-item" style="color:var(--text3)">Žiadne výsledky</div>';
-  box.classList.add('show');
-}
-
-// ── RENDER ALL ──
+// ── RENDER ──
 function renderAll(){
   renderAlerts();
-  renderOverviewPage();
-  renderGrowthPage();
-  renderPromoPage();
-  document.getElementById('last-updated').textContent='Aktualizované: '+fDate(dashData.generatedAt);
+  renderActiveTab();
+  const t=new Date(dashData.generatedAt).toLocaleTimeString('sk-SK',{hour:'2-digit',minute:'2-digit'});
+  document.getElementById('last-updated').textContent=`Aktualizované ${t} · obnova každých 5 min`;
 }
-
-// ══════════════════════════════════════════
-// ALERTS — trend detection
-// ══════════════════════════════════════════
-function renderAlerts(){
-  const d=dashData,alerts=[],daily=d.daily||[];
-  // Cost spike
-  if(daily.length>=7){
-    const avg7=daily.slice(-7).reduce((s,x)=>s+x.cost,0)/7;
-    const last=daily[daily.length-1];
-    if(last&&last.cost>avg7*2.2&&last.cost>0.01)
-      alerts.push({t:'crit',msg:`⚠️ Náklady ${last.date}: ${fU(last.cost)} — ${(last.cost/avg7).toFixed(1)}× nad 7d priemerom`});
-  }
-  // Credit low
-  const bal=d.openRouterBalance;
-  if(bal){const p=bal.credits?(bal.remaining/bal.credits)*100:0;
-    if(p<10)alerts.push({t:'crit',msg:`🔴 Premium kredit pod 10% — zostáva ${fU(bal.remaining)}`});
-    else if(p<25)alerts.push({t:'warn',msg:`🟡 Premium kredit pod 25% — zostáva ${fU(bal.remaining)}`});
-  }
-  // Cost trending up
-  if(daily.length>=14){
-    const f7=daily.slice(-14,-7).reduce((s,x)=>s+x.cost,0)/7;
-    const l7=daily.slice(-7).reduce((s,x)=>s+x.cost,0)/7;
-    if(f7>0&&l7/f7>1.5)alerts.push({t:'warn',msg:`📈 Náklady rastú: ${fU(l7)}/d vs ${fU(f7)}/d (+${fPct((l7/f7-1)*100)})`});
-  }
-  // Promo near expiry
-  promoData.codes.forEach(c=>{
-    if(c.expires_at&&c.is_active){const d=daysFromNow(c.expires_at);if(d!==null&&d<=3&&d>=0)alerts.push({t:'warn',msg:`🎟️ Promo ${c.code} expiruje za ${d} dní`})}
-  });
-  // Promo fully used
-  promoData.codes.forEach(c=>{if(c.is_active&&c.used_count>=c.max_uses)alerts.push({t:'info',msg:`✅ Promo ${c.code} plne využitý (${c.used_count}/${c.max_uses})`})});
-  // All OK
-  if(!alerts.length)alerts.push({t:'ok',msg:'✅ Všetko v poriadku — žiadne varovné trendy'});
-  document.getElementById('alerts-strip').innerHTML=alerts.map(a=>`<div class="alert alert-${a.t}"><span>${a.msg}</span><span class="alert-dismiss" onclick="this.parentElement.remove()">×</span></div>`).join('');
-}
-
-// ══════════════════════════════════════════
-// PAGE 1: OVERVIEW
-// ══════════════════════════════════════════
-function renderOverviewPage(){
-  const d=dashData,t=d.totals||{},r=d.revenue||{},s=d.subscribers||{};
-  const allUsers=d.users||[];
-  const filteredUsers=getOverviewUsers();
-  const isFiltered=currentUserFilter!=='all';
-  const daily=d.daily||[];
-
-  // When a single user is selected, compute their KPIs
-  let kpiReq,kpiCost,kpiCostEUR,kpiUsers,kpiAvg,kpiArpu,kpiPrompt,kpiCompl;
-  let costTrend='flat',reqTrend='flat';
-
-  if(isFiltered&&filteredUsers.length===1){
-    const u=filteredUsers[0];
-    kpiReq=u.requests||0;
-    kpiCost=u.cost||0;
-    kpiCostEUR=kpiCost*0.92;
-    kpiPrompt=u.promptTokens||0;
-    kpiCompl=u.completionTokens||0;
-    kpiUsers=1;
-    kpiAvg=kpiReq?kpiCost/kpiReq:0;
-    kpiArpu=kpiCostEUR;
-  }else{
-    kpiReq=t.requests||0;
-    kpiCost=t.estimatedCostUSD||0;
-    kpiCostEUR=r.aiCostEUR||0;
-    kpiPrompt=t.promptTokens||0;
-    kpiCompl=t.completionTokens||0;
-    kpiUsers=allUsers.length;
-    kpiAvg=kpiReq?kpiCost/kpiReq:0;
-    kpiArpu=kpiUsers>0?((r.monthlyGrossEUR||0)/kpiUsers):0;
-  }
-
-  if(daily.length>=14){
-    const fc=daily.slice(-14,-7).reduce((s,x)=>s+x.cost,0),lc=daily.slice(-7).reduce((s,x)=>s+x.cost,0);
-    costTrend=lc>fc*1.1?'up':lc<fc*.9?'down':'flat';
-    const fr=daily.slice(-14,-7).reduce((s,x)=>s+x.requests,0),lr=daily.slice(-7).reduce((s,x)=>s+x.requests,0);
-    reqTrend=lr>fr*1.1?'up':lr<fr*.9?'down':'flat';
-  }
-
-  const filterLabel=isFiltered?` <span style="font-size:11px;color:var(--orange);font-weight:400">(filtrované)</span>`:'';
-  document.getElementById('kpi-row').innerHTML=`
-    <div class="kpi orange"><div class="kpi-label">Requesty${filterLabel}</div><div class="kpi-value">${fmt(kpiReq)}</div><div class="kpi-sub">${fmt(kpiPrompt)} prompt + ${fmt(kpiCompl)} compl</div>${isFiltered?'':`<div class="kpi-trend ${reqTrend}">${reqTrend==='up'?'↑':reqTrend==='down'?'↓':'→'} 7d</div>`}</div>
-    <div class="kpi red"><div class="kpi-label">AI náklady${filterLabel}</div><div class="kpi-value">${fU(kpiCost)}</div><div class="kpi-sub">≈ ${fE(kpiCostEUR)}</div>${isFiltered?'':`<div class="kpi-trend ${costTrend==='up'?'down':costTrend==='down'?'up':'flat'}">${costTrend==='up'?'↑ rastie':costTrend==='down'?'↓ klesá':'→'}</div>`}</div>
-    <div class="kpi green"><div class="kpi-label">Mesačný príjem</div><div class="kpi-value">${fE(r.monthlyGrossEUR)}</div><div class="kpi-sub">po Apple: ${fE(r.netRevenueEUR)}</div></div>
-    <div class="kpi ${(r.profitEUR||0)>=0?'green':'red'}"><div class="kpi-label">Profit</div><div class="kpi-value">${fE(r.profitEUR)}</div><div class="kpi-sub">príjem − Apple − AI</div></div>
-    <div class="kpi blue"><div class="kpi-label">Používatelia</div><div class="kpi-value">${kpiUsers}</div><div class="kpi-sub">trial: ${s.trial||0} · premium: ${s.premium||0} · BYOK: ${s.byok||0}</div></div>
-    <div class="kpi purple"><div class="kpi-label">Avg / request${filterLabel}</div><div class="kpi-value">${fU(kpiAvg)}</div><div class="kpi-sub">ARPU: ${fE(kpiArpu)}/mes</div></div>
-  `;
-  renderUserDetail();
-  renderCredits(d.openRouterBalance,d.openRouterTrialBalance);
-  renderCharts(d);
-  renderPrediction(daily);
-  renderPareto(allUsers);
-  renderEngagement(d.usageStatsSummary||{});
-  renderGeoMap(allUsers);
-  renderTable('tbl-models',d.byModel||{},['requests','prompt','completion','cost'],shortModel);
-  renderTable('tbl-tasks',d.byTask||{},['requests','prompt','completion','cost']);
-  renderUsers(filteredUsers);
-  renderLocale(d.localeDistribution||{});
-  renderPricing(d.modelPricing||{});
-}
-
-function renderCredits(premium,trial){
-  const card=(label,data,color)=>{
-    if(!data)return`<div class="credit-card"><h3><span class="dot" style="background:${color}"></span>${label}</h3><div class="unavailable">Nedostupné</div></div>`;
-    const pct=data.credits?((data.remaining/data.credits)*100):0;
-    const bc=pct>50?'var(--green)':pct>20?'var(--yellow)':'var(--red)';
-    return`<div class="credit-card"><h3><span class="dot" style="background:${bc}"></span>${label}</h3>
-      <div class="credit-vals"><span>${fU(data.remaining)}</span><span>z ${fU(data.credits)}</span></div>
-      <div style="font-size:12px;color:var(--text2)">Spotrebované: ${fU(data.usage)} (${fPct(100-pct)})</div>
-      <div class="progress-bar"><div class="fill" style="width:${pct}%;background:${bc}"></div></div></div>`;
-  };
-  document.getElementById('credit-row').innerHTML=card('Premium kredit',premium,'var(--green)')+card('Trial kredit',trial,'var(--blue)');
+function renderActiveTab(){
+  if(activeTab==='overview')renderOverviewPage();
+  if(activeTab==='campaigns')renderCampaignsPage();
+  if(activeTab==='users')renderUsersPage();
+  if(activeTab==='ai')renderAiPage();
 }
 
 function destroyChart(id){if(charts[id]){charts[id].destroy();delete charts[id]}}
 const CC=['#f97316','#3b82f6','#22c55e','#a855f7','#ef4444','#eab308','#06b6d4','#ec4899','#14b8a6','#f43f5e'];
+const axis=(extra={})=>({ticks:{color:'#9393a0',font:{size:11},...extra},grid:{color:'#1e1e2e'}});
 
-function renderCharts(d){
-  const daily=d.daily||[],labels=daily.map(x=>x.date.slice(5)),costs=daily.map(x=>x.cost),reqs=daily.map(x=>x.requests);
-  // 7d MA
-  const ma7=costs.map((_,i)=>i<6?null:costs.slice(i-6,i+1).reduce((s,v)=>s+v,0)/7);
-  destroyChart('daily-cost');
-  charts['daily-cost']=new Chart(document.getElementById('chart-daily-cost'),{type:'line',data:{labels,datasets:[
-    {label:'Denne',data:costs,borderColor:'var(--orange)',backgroundColor:'rgba(249,115,22,.12)',fill:true,tension:.3,pointRadius:2,borderWidth:2},
-    {label:'7d priemer',data:ma7,borderColor:'rgba(59,130,246,.5)',borderDash:[4,3],pointRadius:0,tension:.4,borderWidth:1.5,fill:false}
-  ]},options:{responsive:true,plugins:{legend:{labels:{color:'#9393a0',font:{size:11}}}},scales:{x:{ticks:{color:'#9393a0',font:{size:11}},grid:{color:'#1e1e2e'}},y:{ticks:{color:'#9393a0',callback:v=>'$'+v.toFixed(3)},grid:{color:'#1e1e2e'}}}}});
-
-  destroyChart('daily-req');
-  charts['daily-req']=new Chart(document.getElementById('chart-daily-req'),{type:'bar',data:{labels,datasets:[{label:'Requesty',data:reqs,backgroundColor:'rgba(59,130,246,.7)',borderRadius:4}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#9393a0',font:{size:11}},grid:{color:'#1e1e2e'}},y:{ticks:{color:'#9393a0'},grid:{color:'#1e1e2e'}}}}});
-
-  const models=Object.entries(d.byModel||{});
-  destroyChart('model');
-  charts['model']=new Chart(document.getElementById('chart-model'),{type:'doughnut',data:{labels:models.map(([k])=>shortModel(k)),datasets:[{data:models.map(([,v])=>v.cost||0),backgroundColor:CC.slice(0,models.length),borderWidth:0}]},options:{responsive:true,plugins:{legend:{position:'bottom',labels:{color:'#e4e4e7',font:{size:11},padding:8}}},cutout:'60%'}});
-
-  const tasks=Object.entries(d.byTask||{}).sort((a,b)=>(b[1].requests||0)-(a[1].requests||0));
-  destroyChart('task');
-  charts['task']=new Chart(document.getElementById('chart-task'),{type:'bar',data:{labels:tasks.map(([k])=>k),datasets:[{label:'Requesty',data:tasks.map(([,v])=>v.requests),backgroundColor:'rgba(168,85,247,.7)',borderRadius:4}]},options:{indexAxis:'y',responsive:true,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#9393a0'},grid:{color:'#1e1e2e'}},y:{ticks:{color:'#9393a0',font:{size:11}},grid:{color:'#1e1e2e'}}}}});
+// ══════════════════════════════════════════
+// ALERTS
+// ══════════════════════════════════════════
+function renderAlerts(){
+  const d=dashData,alerts=[],daily=d.daily||[];
+  const sync=d.ads?.sync;
+  if(sync?.error)alerts.push({t:'crit',msg:`⚠️ Apple Ads sa nepodarilo načítať: ${esc(sync.error)}`});
+  // Kampane pred koncom
+  adCampaigns().forEach(c=>{
+    if(campaignState(c)!=='running'||!c.end_date)return;
+    const left=daysFromNow(c.end_date);
+    if(left!==null&&left>=0&&left<=7)alerts.push({t:'warn',msg:`📣 Kampaň ${esc(c.name)} končí ${fDay(c.end_date)}`});
+  });
+  // Predplatné pred obnovou
+  const soon=realUsers().filter(u=>isSubscriber(u)&&u.premium_expires_at).map(u=>u.premium_expires_at).filter(x=>{const n=daysFromNow(x);return n!==null&&n>=0&&n<=7}).sort();
+  if(soon.length)alerts.push({t:'info',msg:`💳 ${soon.length} ${plural(soon.length,'predplatné sa','predplatné sa','predplatných sa')} do 7 dní obnoví alebo skončí, najbližšie ${fDay(soon[0])}`});
+  // AI náklady
+  if(daily.length>=7){
+    const avg7=daily.slice(-7).reduce((s,x)=>s+x.cost,0)/7;
+    const last=daily[daily.length-1];
+    if(last&&last.cost>avg7*2.2&&last.cost>0.01)alerts.push({t:'crit',msg:`⚠️ AI náklady ${fDay(last.date)}: ${fU(last.cost)}, ${(last.cost/avg7).toFixed(1)}× nad 7-dňovým priemerom`});
+  }
+  // Kredit
+  const cr=d.openRouter?.credits;
+  if(cr&&cr.remaining<10)alerts.push({t:'crit',msg:`🔴 Kredit OpenRouter: zostáva ${fU(cr.remaining)}`});
+  if(!alerts.length)alerts.push({t:'ok',msg:'✅ Všetko v poriadku'});
+  document.getElementById('alerts-strip').innerHTML=alerts.map(a=>`<div class="alert alert-${a.t}"><span>${a.msg}</span><span class="alert-dismiss" onclick="this.parentElement.remove()">×</span></div>`).join('');
 }
 
-function renderPrediction(daily){
-  destroyChart('predict');if(!daily.length)return;
-  const costs=daily.map(x=>x.cost),n=costs.length;
-  let sx=0,sy=0,sxx=0,sxy=0;
-  for(let i=0;i<n;i++){sx+=i;sy+=costs[i];sxx+=i*i;sxy+=i*costs[i]}
-  const slope=(n*sxy-sx*sy)/(n*sxx-sx*sx||1),intercept=(sy-slope*sx)/n;
-  const regLine=[];for(let i=0;i<n;i++)regLine.push(Math.max(0,slope*i+intercept));
-  const futureLabels=[],futurePred=[],lastDate=new Date(daily[n-1].date);
-  for(let i=1;i<=7;i++){const fd=new Date(lastDate);fd.setDate(fd.getDate()+i);futureLabels.push(fd.toISOString().slice(5,10));futurePred.push(Math.max(0,slope*(n-1+i)+intercept))}
-  const allLabels=[...daily.map(x=>x.date.slice(5)),...futureLabels];
-  const predictedMonthly=(slope*(n+15)+intercept)*30;
-  charts['predict']=new Chart(document.getElementById('chart-predict'),{type:'line',data:{labels:allLabels,datasets:[
-    {label:'Skutočné',data:[...costs,...Array(7).fill(null)],borderColor:'var(--orange)',backgroundColor:'rgba(249,115,22,.1)',fill:true,tension:.3,pointRadius:2,spanGaps:false,borderWidth:2},
-    {label:'Predikcia',data:[...regLine,...futurePred],borderColor:'#9393a0',borderDash:[6,4],pointRadius:0,tension:.3,fill:false,borderWidth:1.5}
-  ]},options:{responsive:true,plugins:{legend:{labels:{color:'#e4e4e7'}},subtitle:{display:true,text:'Predpokladané mesačné: '+fU(predictedMonthly),color:'#9393a0',font:{size:12}}},scales:{x:{ticks:{color:'#9393a0',font:{size:11}},grid:{color:'#1e1e2e'}},y:{ticks:{color:'#9393a0',callback:v=>'$'+v.toFixed(3)},grid:{color:'#1e1e2e'}}}}});
+// ══════════════════════════════════════════
+// PAGE 1: PREHĽAD
+// ══════════════════════════════════════════
+function renderOverviewPage(){
+  const d=dashData,users=realUsers(),r=d.revenue||{};
+  const total=users.length,internal=allUsers().length-total;
+  const ios=users.filter(u=>u.platform==='ios').length,android=users.filter(u=>u.platform==='android').length;
+  const today=users.filter(u=>u.created_at&&dayKey(u.created_at)===todayKey()).length;
+  const new7=users.filter(u=>createdWithin(u,7)).length;
+  const prev7=users.filter(u=>createdWithin(u,14)&&!createdWithin(u,7)).length;
+  const act7=users.filter(u=>activeWithin(u,7)).length,act30=users.filter(u=>activeWithin(u,30)).length;
+  const subs=(r.yearly||0)+(r.monthly||0);
+  const ads=sumRows(adRows()),acc=adAccounts();
+  const first=adsFirstDay();
+  const trend=new7>prev7?'up':new7<prev7?'down':'flat';
+
+  document.getElementById('kpi-row').innerHTML=`
+    <div class="kpi blue"><div class="kpi-label">Používatelia</div><div class="kpi-value">${total}</div><div class="kpi-sub">iOS ${ios} · Android ${android}${internal?` · bez ${internal} interných`:''}</div></div>
+    <div class="kpi green"><div class="kpi-label">Noví za 7 dní</div><div class="kpi-value">${new7}</div><div class="kpi-sub">dnes ${today} · týždeň predtým ${prev7}</div><div class="kpi-trend ${trend}">${trend==='up'?'↑':trend==='down'?'↓':'→'}</div></div>
+    <div class="kpi cyan"><div class="kpi-label">Aktívni za 7 dní</div><div class="kpi-value">${act7}</div><div class="kpi-sub">za 30 dní ${act30}</div></div>
+    <div class="kpi green"><div class="kpi-label">Predplatné</div><div class="kpi-value">${subs}</div><div class="kpi-sub">ročné ${r.yearly||0} · mesačné ${r.monthly||0}</div></div>
+    <div class="kpi purple"><div class="kpi-label">Príjem za mesiac (odhad)</div><div class="kpi-value">${fE(r.estimatedMonthlyEur||0)}</div><div class="kpi-sub">z cenníka, pred províziou a DPH</div></div>
+    <div class="kpi orange"><div class="kpi-label">Reklama spolu</div><div class="kpi-value">${fE(ads.spend)}</div><div class="kpi-sub">${ads.installs} stiahnutí · ${fE(perUnit(ads.spend,ads.installs))} za jedno</div></div>
+    <div class="kpi yellow"><div class="kpi-label">Reklama za nový účet</div><div class="kpi-value">${fE(perUnit(ads.spend,acc.users.length))}</div><div class="kpi-sub">${acc.users.length} nových účtov${first?` od ${fDay(first)}`:''}</div></div>
+    <div class="kpi red"><div class="kpi-label">AI za 30 dní</div><div class="kpi-value">${fU(d.ai30d?.cost||0)}</div><div class="kpi-sub">${fmt(d.ai30d?.requests||0)} požiadaviek</div></div>
+  `;
+
+  renderPlan();
+  renderOverviewCharts(users);
+  renderSubscribers(users);
+  renderCountries(users);
+  renderFeedback(d.feedback||[]);
+  document.getElementById('links-row').innerHTML=(d.links||[]).map(l=>`<a href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.label)} ↗</a>`).join('');
 }
 
-function renderPareto(users){
-  destroyChart('pareto');if(!users.length)return;
-  const sorted=[...users].sort((a,b)=>(b.cost||0)-(a.cost||0));
-  const tc=sorted.reduce((s,u)=>s+(u.cost||0),0);let cum=0;
-  const cumPct=sorted.map(u=>{cum+=(u.cost||0);return tc?(cum/tc)*100:0});
-  charts['pareto']=new Chart(document.getElementById('chart-pareto'),{type:'bar',data:{labels:sorted.map(u=>u.display_name||shortId(u.id)),datasets:[
-    {label:'Náklady',data:sorted.map(u=>u.cost||0),backgroundColor:'rgba(249,115,22,.7)',borderRadius:4,yAxisID:'y'},
-    {label:'Kumulatívne %',data:cumPct,type:'line',borderColor:'var(--blue)',pointRadius:3,pointBackgroundColor:'var(--blue)',yAxisID:'y1',fill:false,borderWidth:2}
-  ]},options:{responsive:true,plugins:{legend:{labels:{color:'#e4e4e7'}}},scales:{x:{ticks:{color:'#9393a0',font:{size:11}},grid:{color:'#1e1e2e'}},y:{position:'left',ticks:{color:'#9393a0',callback:v=>'$'+v.toFixed(3)},grid:{color:'#1e1e2e'}},y1:{position:'right',min:0,max:100,ticks:{color:'#9393a0',callback:v=>v+'%'},grid:{display:false}}}}});
+function renderPlan(){
+  const p=dashData.plan,el=document.getElementById('plan-card');
+  if(!p){el.style.display='none';return}
+  const countries=new Set(p.countries);
+  const count=realUsers().filter(u=>countries.has(u.country)&&u.created_at&&dayKey(u.created_at)>=p.start).length;
+  const t=todayKey();
+  const week=p.weeks.find(w=>w.end>=t)||p.weeks[p.weeks.length-1];
+  const missing=week.target-count;
+  el.innerHTML=`
+    <div class="plan-top">
+      <div class="plan-title">${esc(p.title)}</div>
+      <div class="plan-val"><strong>${count}</strong>z ${p.target} do ${fDay(p.deadline)} · cieľ k ${fDay(week.end)}: ${week.target}${missing>0?`, chýba ${missing}`:', splnené'}</div>
+    </div>
+    <div class="plan-bar"><i style="width:${Math.min(100,count/p.target*100)}%"></i></div>
+    <div class="plan-note">${esc(p.note)}</div>`;
 }
 
-function renderEngagement(s){
-  document.getElementById('engage-row').innerHTML=[
-    {v:s.totalWorkouts||0,l:'Tréningy dokončené',i:'🏋️'},{v:s.totalFoodsLogged||0,l:'Jedlá zalogované',i:'🍎'},
-    {v:s.totalTrainingMinutes||0,l:'Minúty tréningu',i:'⏱'},{v:s.totalAiConversations||0,l:'AI konverzácie',i:'💬'}
-  ].map(x=>`<div class="engage-card"><div style="font-size:24px">${x.i}</div><div class="val">${fmt(x.v)}</div><div class="lbl">${x.l}</div></div>`).join('');
-}
+function renderOverviewCharts(users){
+  const days=[];
+  for(let i=29;i>=0;i--)days.push(new Date(Date.now()-i*864e5).toLocaleDateString('sv'));
+  const newBy={};
+  users.forEach(u=>{if(u.created_at){const k=dayKey(u.created_at);newBy[k]=(newBy[k]||0)+1}});
+  const spendBy={};
+  adRows().filter(r=>r.period_start===r.period_end).forEach(r=>{spendBy[r.period_start]=(spendBy[r.period_start]||0)+Number(r.spend||0)});
+  const hasSpend=Object.keys(spendBy).length>0;
+  const labels=days.map(k=>fDay(k));
+  const datasets=[{label:'Noví používatelia',data:days.map(k=>newBy[k]||0),backgroundColor:'rgba(34,197,94,.7)',borderRadius:4,yAxisID:'y',order:2}];
+  if(hasSpend)datasets.push({label:'Reklama (€)',type:'line',data:days.map(k=>spendBy[k]??null),borderColor:'#f97316',backgroundColor:'#f97316',pointRadius:2,borderWidth:2,tension:.3,yAxisID:'y1',order:1});
+  destroyChart('new-daily');
+  charts['new-daily']=new Chart(document.getElementById('chart-new-daily'),{type:'bar',data:{labels,datasets},options:{responsive:true,plugins:{legend:{display:hasSpend,labels:{color:'#9393a0',font:{size:11}}}},scales:{x:axis({maxTicksLimit:10}),y:axis({stepSize:1,precision:0}),...(hasSpend?{y1:{position:'right',grid:{display:false},ticks:{color:'#9393a0',font:{size:11},callback:v=>v+' €'}}}:{})}}});
 
-function renderTable(id,obj,fields,keyFn){
-  const tbody=document.querySelector('#'+id+' tbody');
-  const rows=Object.entries(obj).sort((a,b)=>(b[1].requests||0)-(a[1].requests||0));
-  tbody.innerHTML=rows.map(([k,v])=>`<tr><td>${keyFn?keyFn(k):k}</td>${fields.map(f=>`<td>${f==='cost'?fU(v[f]):fmt(v[f])}</td>`).join('')}</tr>`).join('')||'<tr><td colspan="5" class="empty">Žiadne dáta</td></tr>';
-}
-
-// Používatelia table filters (client-side, over the loaded rows)
-let userTblFilters={q:'',plan:'all',from:'',to:'',groupByDay:false};
-
-function applyUserTblFilters(users){
-  const f=userTblFilters;
-  return users.filter(u=>{
-    // Plan
-    if(f.plan!=='all'&&(u.plan||'')!==f.plan)return false;
-    // Text: email OR id (short+full) OR display name, case-insensitive substring
-    if(f.q){
-      const q=f.q.toLowerCase();
-      const hay=[u.email,u.id,u.fullId,u.display_name].filter(Boolean).join(' ').toLowerCase();
-      if(!hay.includes(q))return false;
+  const sorted=users.filter(u=>u.created_at).map(u=>dayKey(u.created_at)).sort();
+  const cumLabels=[],cumData=[];
+  if(sorted.length){
+    let i=0,n=0;
+    for(const day=new Date(sorted[0]);day.toLocaleDateString('sv')<=todayKey();day.setDate(day.getDate()+1)){
+      const k=day.toLocaleDateString('sv');
+      while(i<sorted.length&&sorted[i]<=k){n++;i++}
+      cumLabels.push(fDay(k));cumData.push(n);
     }
-    // Registration date range (created_at), compared by calendar day
+  }
+  destroyChart('cumul');
+  charts['cumul']=new Chart(document.getElementById('chart-cumul'),{type:'line',data:{labels:cumLabels,datasets:[{label:'Spolu',data:cumData,borderColor:'#3b82f6',backgroundColor:'rgba(59,130,246,.1)',fill:true,tension:.2,pointRadius:0,borderWidth:2}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{x:axis({maxTicksLimit:10}),y:axis({precision:0})}}});
+}
+
+function renderSubscribers(users){
+  const rows=users.filter(u=>isSubscriber(u)||u.status==='byok').sort((a,b)=>String(a.premium_expires_at||'9').localeCompare(String(b.premium_expires_at||'9')));
+  const gift=users.filter(u=>u.status==='gift').length,ended=users.filter(u=>u.status==='expired').length;
+  document.querySelector('#tbl-subs tbody').innerHTML=(rows.map(u=>{
+    const left=daysFromNow(u.premium_expires_at);
+    const renew=u.status==='byok'?'<span class="muted">jednorazovo</span>':`${fDateShort(u.premium_expires_at)}<span class="cell-sub">o ${left} ${plural(left,'deň','dni','dní')}</span>`;
+    return`<tr><td>${userLabel(u)}</td><td>${statusBadge(u.status)}</td><td class="num">${renew}</td><td>${countryLabel(u.country)}</td><td class="num">${fDateShort(u.created_at)}</td></tr>`;
+  }).join('')||'<tr><td colspan="5" class="empty">Zatiaľ žiadne predplatné</td></tr>')+
+  `<tr><td colspan="5" class="muted">Darované ${gift} · skončené ${ended}</td></tr>`;
+}
+
+function renderCountries(users){
+  const by={};
+  users.forEach(u=>{
+    const c=u.country||'?';
+    const s=by[c]||(by[c]={total:0,new7:0,act7:0,subs:0});
+    s.total++;
+    if(createdWithin(u,7))s.new7++;
+    if(activeWithin(u,7))s.act7++;
+    if(isSubscriber(u))s.subs++;
+  });
+  document.querySelector('#tbl-countries tbody').innerHTML=Object.entries(by).sort((a,b)=>b[1].total-a[1].total).map(([c,s])=>`<tr><td>${c==='?'?'<span class="muted">Neznáma</span>':countryLabel(c)}</td><td class="num"><strong>${s.total}</strong></td><td class="num">${s.new7}</td><td class="num">${s.act7}</td><td class="num">${s.subs}</td></tr>`).join('')||'<tr><td colspan="5" class="empty">Žiadne dáta</td></tr>';
+}
+
+function renderFeedback(rows){
+  document.querySelector('#tbl-feedback tbody').innerHTML=rows.map(f=>`<tr><td class="num">${fDateShort(f.created_at)}</td><td>${esc(f.category||'—')}</td><td class="fb-msg">${esc(f.message)}</td><td class="num">${esc(f.app_version||'—')}</td></tr>`).join('')||'<tr><td colspan="4" class="empty">Zatiaľ nič</td></tr>';
+}
+
+// ══════════════════════════════════════════
+// PAGE 2: KAMPANE A KÓDY
+// ══════════════════════════════════════════
+function renderCampaignsPage(){
+  const d=dashData,camps=adCampaigns(),rows=adRows(),t=sumRows(rows),acc=adAccounts();
+  const running=camps.filter(c=>campaignState(c)==='running');
+  const cap=running.reduce((s,c)=>s+Number(c.daily_budget||0),0);
+  const first=adsFirstDay(),until=adsDataUntil();
+  const daysRun=first&&until?Math.max(1,Math.round((new Date(until)-new Date(first))/864e5)+1):null;
+
+  document.getElementById('kpi-ads-row').innerHTML=`
+    <div class="kpi orange"><div class="kpi-label">Minuté spolu</div><div class="kpi-value">${fE(t.spend)}</div><div class="kpi-sub">${daysRun?`priemer ${fE(t.spend/daysRun)} za deň`:'zatiaľ nič'}</div></div>
+    <div class="kpi yellow"><div class="kpi-label">Denné stropy</div><div class="kpi-value">${fE(cap)}</div><div class="kpi-sub">${running.length} ${plural(running.length,'kampaň beží','kampane bežia','kampaní beží')}</div></div>
+    <div class="kpi blue"><div class="kpi-label">Stiahnutia</div><div class="kpi-value">${t.installs}</div><div class="kpi-sub">${fE(perUnit(t.spend,t.installs))} za jedno</div></div>
+    <div class="kpi cyan"><div class="kpi-label">Ťuknutia</div><div class="kpi-value">${fmt(t.taps)}</div><div class="kpi-sub">${t.taps?fPct(t.installs/t.taps*100)+' z nich stiahlo':'—'}</div></div>
+    <div class="kpi green"><div class="kpi-label">Nové účty od štartu</div><div class="kpi-value">${acc.users.length}</div><div class="kpi-sub">${fE(perUnit(t.spend,acc.users.length))} za jeden</div></div>
+    <div class="kpi purple"><div class="kpi-label">Vrátili sa</div><div class="kpi-value">${acc.users.filter(cameBack).length}</div><div class="kpi-sub">predplatné ${acc.users.filter(isSubscriber).length}</div></div>
+  `;
+
+  // Stav napojenia
+  const sync=d.ads?.sync||{},box=document.getElementById('ads-sync-notice');
+  if(sync.error)box.innerHTML=`<div class="notice err"><strong>Apple Ads sa nepodarilo načítať.</strong> Zobrazené sú posledné uložené čísla. ${esc(sync.error)}</div>`;
+  else if(sync.live)box.innerHTML=`<div class="notice"><strong>Apple Ads je napojené naživo.</strong> Načítané ${fDate(sync.lastSyncAt)}, obnovuje sa raz za hodinu. Apple dopĺňa čísla s oneskorením do 3 hodín.</div>`;
+  else box.innerHTML=`<div class="notice warn"><strong>Čísla z Apple Ads sú zatiaľ zapísané ručne</strong>${until?`, naposledy do ${fDay(until)}`:'.'} Naživo pôjdu po napojení API.</div>`;
+
+  // Kampane
+  const stateOrder={running:0,on_hold:1,paused:2,ended:3};
+  const withTotals=camps.map(c=>({c,s:sumRows(rows.filter(r=>r.campaign_id===c.id)),st:campaignState(c)})).sort((a,b)=>(stateOrder[a.st]-stateOrder[b.st])||(b.s.spend-a.s.spend));
+  const netName=id=>(d.ads?.networks||[]).find(n=>n.id===id)?.name||id;
+  document.querySelector('#tbl-ad-campaigns tbody').innerHTML=withTotals.map(({c,s,st})=>{
+    const[label,cls]=CAMPAIGN_STATE[st]||CAMPAIGN_STATE.running;
+    return`<tr><td>${esc(c.name)}<span class="cell-sub">${esc(netName(c.network))}${c.note?' · '+esc(c.note):''}</span></td><td><span class="badge badge-${cls}">${label}</span></td><td class="num">${fDay(c.start_date)}–${fDay(c.end_date)}</td><td class="num">${st==='running'?fE(c.daily_budget):'—'}</td><td class="num">${fmt(s.impressions)}</td><td class="num">${fmt(s.taps)}</td><td class="num">${s.installs}</td><td class="num">${fE(s.spend)}</td><td class="num">${fE(perUnit(s.spend,s.installs))}</td></tr>`;
+  }).join('')+(withTotals.length?`<tr class="total"><td colspan="4">Spolu</td><td class="num">${fmt(t.impressions)}</td><td class="num">${fmt(t.taps)}</td><td class="num">${t.installs}</td><td class="num">${fE(t.spend)}</td><td class="num">${fE(perUnit(t.spend,t.installs))}</td></tr>`:'<tr><td colspan="9" class="empty">Žiadne kampane</td></tr>');
+
+  document.getElementById('ad-networks').innerHTML=(d.ads?.networks||[]).map(n=>{
+    const cnt=camps.filter(c=>c.network===n.id).length;
+    return`<div class="table-note"><strong>${esc(n.name)}</strong> · účet ${esc(n.account)} · ${cnt} ${plural(cnt,'kampaň','kampane','kampaní')} · ${esc(n.note)}</div>`;
+  }).join('');
+
+  // Podľa krajiny
+  const campById=Object.fromEntries(camps.map(c=>[c.id,c]));
+  const byCountry={},unsplit=[];
+  rows.forEach(r=>{
+    const c=campById[r.campaign_id];
+    const cc=r.country||((c?.countries||[]).length===1?c.countries[0]:null);
+    if(cc)(byCountry[cc]=byCountry[cc]||[]).push(r);else unsplit.push(r);
+  });
+  Object.keys(acc.firstByCountry).forEach(cc=>{byCountry[cc]=byCountry[cc]||[]});
+  const countryRows=Object.entries(byCountry).map(([cc,list])=>{
+    const s=sumRows(list);
+    const people=acc.users.filter(u=>u.country===cc);
+    return{cc,s,people};
+  }).sort((a,b)=>b.s.spend-a.s.spend);
+  const rest=sumRows(unsplit);
+  document.querySelector('#tbl-ad-countries tbody').innerHTML=countryRows.map(({cc,s,people})=>`<tr><td>${countryLabel(cc)}<span class="cell-sub">od ${fDay(acc.firstByCountry[cc])}</span></td><td class="num">${fE(s.spend)}</td><td class="num">${s.installs}</td><td class="num"><strong>${people.length}</strong></td><td class="num">${people.filter(cameBack).length}</td><td class="num">${people.filter(isSubscriber).length}</td><td class="num">${fE(perUnit(s.spend,people.length))}</td></tr>`).join('')+
+    (rest.spend>0||rest.installs>0?`<tr><td class="muted">Viac krajín spolu</td><td class="num">${fE(rest.spend)}</td><td class="num">${rest.installs}</td><td colspan="4"></td></tr>`:'')||'<tr><td colspan="7" class="empty">Žiadne dáta</td></tr>';
+
+  renderCodes();
+}
+
+function renderCodes(){
+  const codes=dashData.codes||[],camps=dashData.ads?.campaigns||[];
+  const nameOf=id=>camps.find(c=>c.id===id)?.name||id;
+  const state=c=>!c.is_active?['Vypnutý','inactive']:c.max_uses&&c.used_count>=c.max_uses?['Vyčerpaný','expired']:['Zapnutý','active'];
+  const linked=codes.filter(c=>c.campaign_id),old=codes.filter(c=>!c.campaign_id);
+  const row=(c,withCampaign)=>{
+    const[label,cls]=state(c);
+    return`<tr><td><strong>${esc(c.code)}</strong></td>${withCampaign?`<td>${esc(nameOf(c.campaign_id))}</td>`:''}<td class="num">${c.duration_days?c.duration_days+' dní':'—'}</td><td class="num">${c.used_count||0}${c.max_uses?' / '+c.max_uses:''}</td><td><span class="badge badge-${cls}">${label}</span></td><td class="muted">${esc(c.note||'')}</td></tr>`;
+  };
+  document.getElementById('codes-live').innerHTML=linked.length
+    ?`<div class="table-card"><table><thead><tr><th>Kód</th><th>Kampaň</th><th>Trvanie</th><th>Použité</th><th>Stav</th><th>Poznámka</th></tr></thead><tbody>${linked.map(c=>row(c,true)).join('')}</tbody></table></div>`
+    :'<div class="notice">Zatiaľ žiadny kód nepatrí ku kampani. Keď vzniknú kódy pre kluby alebo creatorov, pribudnú sem aj s kampaňou.</div>';
+  document.getElementById('codes-archive-wrap').style.display=old.length?'':'none';
+  document.getElementById('codes-archive-title').textContent=`Staré kódy (${old.length}, použité ${old.reduce((s,c)=>s+(c.used_count||0),0)}×)`;
+  document.querySelector('#tbl-codes tbody').innerHTML=old.map(c=>row(c,false)).join('');
+}
+
+// ══════════════════════════════════════════
+// PAGE 3: POUŽÍVATELIA
+// ══════════════════════════════════════════
+function renderUsersPage(){
+  const users=realUsers(),total=users.length;
+  const activeToday=users.filter(u=>u.last_seen_at&&dayKey(u.last_seen_at)===todayKey()).length;
+  const act7=users.filter(u=>activeWithin(u,7)).length,act30=users.filter(u=>activeWithin(u,30)).length;
+  const back=users.filter(cameBack).length,subs=users.filter(isSubscriber).length;
+  const pct=n=>total?n/total*100:0;
+
+  document.getElementById('kpi-users-row').innerHTML=`
+    <div class="kpi green"><div class="kpi-label">Aktívni dnes</div><div class="kpi-value">${activeToday}</div></div>
+    <div class="kpi blue"><div class="kpi-label">Aktívni za 7 dní</div><div class="kpi-value">${act7}</div><div class="kpi-sub">${fPct(pct(act7))} zo všetkých</div></div>
+    <div class="kpi cyan"><div class="kpi-label">Aktívni za 30 dní</div><div class="kpi-value">${act30}</div><div class="kpi-sub">${fPct(pct(act30))} zo všetkých</div></div>
+    <div class="kpi orange"><div class="kpi-label">Vrátili sa</div><div class="kpi-value">${back}</div><div class="kpi-sub">aspoň o deň po registrácii, ${fPct(pct(back))}</div></div>
+    <div class="kpi purple"><div class="kpi-label">Predplatné</div><div class="kpi-value">${subs}</div><div class="kpi-sub">${fPct(pct(subs))} zo všetkých</div></div>
+  `;
+
+  // Stav účtov
+  const statuses=Object.keys(STATUS).map(s=>[s,users.filter(u=>u.status===s).length]).filter(([,n])=>n>0);
+  destroyChart('status');
+  charts['status']=new Chart(document.getElementById('chart-status'),{type:'doughnut',data:{labels:statuses.map(([s])=>STATUS[s].label),datasets:[{data:statuses.map(([,n])=>n),backgroundColor:statuses.map(([s])=>STATUS[s].color),borderWidth:0}]},options:{responsive:true,plugins:{legend:{position:'bottom',labels:{color:'#e4e4e7',font:{size:12},padding:10}}},cutout:'60%'}});
+
+  // Lievik
+  const steps=[{label:'Účet',val:total,color:'var(--blue)'},{label:'Vrátili sa',val:back,color:'var(--cyan)'},{label:'Aktívni 7 dní',val:act7,color:'var(--orange)'},{label:'Predplatné',val:subs,color:'var(--green)'}];
+  const max=Math.max(total,1);
+  document.getElementById('funnel-visual').innerHTML='<div class="funnel">'+steps.map((s,i)=>(i>0?'<div class="funnel-arrow">↓</div>':'')+`<div class="funnel-step"><span class="funnel-label">${s.label}</span><div class="funnel-bar" style="width:${Math.max(8,s.val/max*100)}%;background:${s.color}">${s.val}</div><span class="funnel-val">${(s.val/max*100).toFixed(0)} %</span></div>`).join('')+'</div>';
+
+  renderCohorts(users);
+  populateCountryFilter();
+  renderUsers();
+  if(!mapDrawn){renderGeoMap(users);mapDrawn=true}
+}
+
+function renderCohorts(users){
+  const monday=d=>{const x=new Date(d);x.setDate(x.getDate()-(x.getDay()+6)%7);return x.toLocaleDateString('sv')};
+  const by={};
+  users.filter(u=>u.created_at).forEach(u=>{const w=monday(u.created_at);(by[w]=by[w]||[]).push(u)});
+  const weeks=Object.keys(by).sort().reverse().slice(0,8);
+  const el=document.getElementById('cohort-table-wrap');
+  if(!weeks.length){el.innerHTML='<div class="empty">Zatiaľ žiadne dáta</div>';return}
+  el.innerHTML='<table><thead><tr><th>Týždeň</th><th>Noví</th><th>Vrátili sa</th><th>Aktívni za 7 dní</th><th>Predplatné</th></tr></thead><tbody>'+weeks.map(w=>{
+    const list=by[w],end=new Date(w);end.setDate(end.getDate()+6);
+    const cell=n=>`${n} <span class="muted">(${fPct(n/list.length*100)})</span>`;
+    return`<tr><td class="num">${fDay(w)}–${fDay(end)}</td><td class="num"><strong>${list.length}</strong></td><td class="num">${cell(list.filter(cameBack).length)}</td><td class="num">${cell(list.filter(u=>activeWithin(u,7)).length)}</td><td class="num">${cell(list.filter(isSubscriber).length)}</td></tr>`;
+  }).join('')+'</tbody></table>';
+}
+
+// Filtre tabuľky používateľov (nad načítanými riadkami)
+let userTblFilters={q:'',status:'all',platform:'all',country:'all',from:'',to:'',internal:false,groupByDay:false};
+
+function populateCountryFilter(){
+  const sel=document.getElementById('utf-country'),cur=sel.value;
+  const list=[...new Set(allUsers().map(u=>u.country).filter(Boolean))].sort();
+  sel.innerHTML='<option value="all">Všetky</option>'+list.map(c=>`<option value="${esc(c)}">${esc(COUNTRY_NAME[c]||c)}</option>`).join('');
+  sel.value=list.includes(cur)?cur:'all';
+}
+
+function visibleUsers(){
+  const f=userTblFilters;
+  return allUsers().filter(u=>{
+    if(!f.internal&&u.internal)return false;
+    if(f.status!=='all'&&u.status!==f.status)return false;
+    if(f.platform!=='all'&&u.platform!==f.platform)return false;
+    if(f.country!=='all'&&u.country!==f.country)return false;
+    if(f.q){
+      const hay=[u.email,u.id,u.fullId,u.display_name].filter(Boolean).join(' ').toLowerCase();
+      if(!hay.includes(f.q.toLowerCase()))return false;
+    }
     if(f.from||f.to){
       if(!u.created_at)return false;
-      const day=String(u.created_at).slice(0,10);
+      const day=dayKey(u.created_at);
       if(f.from&&day<f.from)return false;
       if(f.to&&day>f.to)return false;
     }
@@ -907,307 +982,72 @@ function applyUserTblFilters(users){
   });
 }
 
-function userRowHtml(u,pm){
-  const planBadge=p=>`<span class="badge badge-${p}">${p}</span>`;
-  // Prefer promo code from admin-stats (user.promo); fall back to the device map.
-  const promo=u.promo||pm.get(u.id);
-  return`<tr><td>${u.display_name||shortId(u.id)}</td><td>${u.email?`<span style="color:var(--text2)">${u.email}</span>`:'—'}</td><td>${u.device_model||'—'}</td><td>${u.os_version||'—'}</td><td>${u.app_version||'—'}</td><td>${u.locale||'—'}</td><td>${planBadge(u.plan||'trial')}</td><td>${promo?`<span class="badge badge-promo">${promo}</span>`:'—'}</td><td>${fmt(u.requests)}</td><td>${fU(u.cost)}</td><td>${fDate(u.last_seen_at)}</td></tr>`;
+function userRowHtml(u){
+  const renew=isSubscriber(u)&&u.premium_expires_at?`<span class="cell-sub">do ${fDateShort(u.premium_expires_at)}</span>`:'';
+  const device=[u.platform==='ios'?'iOS':u.platform==='android'?'Android':null,u.os_version].filter(Boolean).map(esc).join(' ');
+  return`<tr><td>${userLabel(u)}${u.internal?' <span class="badge badge-free">interný</span>':''}${u.email&&u.display_name?`<span class="cell-sub">${esc(u.display_name)}</span>`:''}</td><td>${esc(u.device_model||'—')}<span class="cell-sub">${device||'—'}</span></td><td class="num">${esc(u.app_version||'—')}</td><td>${countryLabel(u.country)}</td><td>${statusBadge(u.status)}${renew}</td><td class="num">${fDateShort(u.created_at)}</td><td class="num">${fDate(u.last_seen_at)}</td><td class="num">${fmt(u.requests)}</td><td class="num">${fU(u.cost)}</td></tr>`;
 }
 
-function renderUsers(users){
+function renderUsers(){
   const tbody=document.querySelector('#tbl-users tbody');
-  const pm=getPromoDeviceMap();
-  const filtered=applyUserTblFilters(users);
-  const cnt=document.getElementById('utf-count');
-  if(cnt)cnt.textContent=`${filtered.length} / ${users.length} používateľov`;
-  if(!filtered.length){tbody.innerHTML='<tr><td colspan="11" class="empty">Žiadni používatelia</td></tr>';return}
-  if(userTblFilters.groupByDay){
-    // Group by registration day (created_at), newest day first
-    const groups={};
-    filtered.forEach(u=>{const day=u.created_at?String(u.created_at).slice(0,10):'—';(groups[day]=groups[day]||[]).push(u)});
-    const days=Object.keys(groups).sort((a,b)=>b.localeCompare(a));
-    tbody.innerHTML=days.map(day=>{
-      const rows=groups[day].sort((a,b)=>(b.cost||0)-(a.cost||0));
-      const head=`<tr class="day-group"><td colspan="11">${day==='—'?'Bez dátumu registrácie':fDateShort(day)}<span class="day-count">${rows.length} ${rows.length===1?'používateľ':'používateľov'}</span></td></tr>`;
-      return head+rows.map(u=>userRowHtml(u,pm)).join('');
-    }).join('');
-  }else{
-    tbody.innerHTML=filtered.sort((a,b)=>(b.cost||0)-(a.cost||0)).map(u=>userRowHtml(u,pm)).join('');
-  }
+  const list=visibleUsers().sort((a,b)=>String(b.created_at||'').localeCompare(String(a.created_at||'')));
+  document.getElementById('utf-count').textContent=`${list.length} ${plural(list.length,'používateľ','používatelia','používateľov')}`;
+  if(!list.length){tbody.innerHTML='<tr><td colspan="9" class="empty">Žiadni používatelia</td></tr>';return}
+  if(!userTblFilters.groupByDay){tbody.innerHTML=list.map(userRowHtml).join('');return}
+  const groups={};
+  list.forEach(u=>{const day=u.created_at?dayKey(u.created_at):'—';(groups[day]=groups[day]||[]).push(u)});
+  tbody.innerHTML=Object.keys(groups).sort((a,b)=>b.localeCompare(a)).map(day=>{
+    const rows=groups[day];
+    return`<tr class="day-group"><td colspan="9">${day==='—'?'Bez dátumu registrácie':fDateShort(day)}<span class="day-count">${rows.length} ${plural(rows.length,'používateľ','používatelia','používateľov')}</span></td></tr>`+rows.map(userRowHtml).join('');
+  }).join('');
 }
 
 function onUserTblFilter(){
-  userTblFilters.q=document.getElementById('utf-search').value.trim();
-  userTblFilters.plan=document.getElementById('utf-plan').value;
-  userTblFilters.from=document.getElementById('utf-from').value;
-  userTblFilters.to=document.getElementById('utf-to').value;
-  userTblFilters.groupByDay=document.getElementById('utf-groupday').checked;
+  userTblFilters={
+    q:document.getElementById('utf-search').value.trim(),
+    status:document.getElementById('utf-status').value,
+    platform:document.getElementById('utf-platform').value,
+    country:document.getElementById('utf-country').value,
+    from:document.getElementById('utf-from').value,
+    to:document.getElementById('utf-to').value,
+    internal:document.getElementById('utf-internal').checked,
+    groupByDay:document.getElementById('utf-groupday').checked
+  };
   document.getElementById('utf-group-toggle').classList.toggle('on',userTblFilters.groupByDay);
-  if(dashData)renderUsers(getOverviewUsers());
+  document.getElementById('utf-internal-toggle').classList.toggle('on',userTblFilters.internal);
+  if(dashData)renderUsers();
 }
 
 function clearUserTblFilters(){
-  userTblFilters={q:'',plan:'all',from:'',to:'',groupByDay:false};
   document.getElementById('utf-search').value='';
-  document.getElementById('utf-plan').value='all';
-  document.getElementById('utf-from').value='';
-  document.getElementById('utf-to').value='';
-  document.getElementById('utf-groupday').checked=false;
-  document.getElementById('utf-group-toggle').classList.remove('on');
-  if(dashData)renderUsers(getOverviewUsers());
+  ['utf-status','utf-platform','utf-country'].forEach(id=>{document.getElementById(id).value='all'});
+  ['utf-from','utf-to'].forEach(id=>{document.getElementById(id).value=''});
+  ['utf-internal','utf-groupday'].forEach(id=>{document.getElementById(id).checked=false});
+  onUserTblFilter();
 }
 
-function renderUserDetail(){
-  const el=document.getElementById('user-detail');
-  if(currentUserFilter==='all'){el.classList.remove('show');el.innerHTML='';return}
-  const u=(dashData?.users||[]).find(x=>x.id===currentUserFilter);
-  if(!u){el.classList.remove('show');return}
-  el.classList.add('show');
-
-  const allUsers=dashData.users||[];
-  const pm=getPromoDeviceMap();
-  const promo=pm.get(u.id);
-  const plan=u.plan||'trial';
-  const name=u.display_name||shortId(u.id);
-  const initials=(name.match(/[A-Za-z0-9]/g)||['?']).slice(0,2).join('').toUpperCase();
-  const totalCost=allUsers.reduce((s,x)=>s+(x.cost||0),0);
-  const totalReq=allUsers.reduce((s,x)=>s+(x.requests||0),0);
-  const costPct=totalCost>0?((u.cost||0)/totalCost*100):0;
-  const reqPct=totalReq>0?((u.requests||0)/totalReq*100):0;
-  const rank=allUsers.sort((a,b)=>(b.cost||0)-(a.cost||0)).findIndex(x=>x.id===u.id)+1;
-  const firstSeen=u.first_seen_at||u.created_at;
-  const daysSince=firstSeen?Math.max(1,Math.ceil((new Date()-new Date(firstSeen))/(864e5))):1;
-  const costPerDay=(u.cost||0)/daysSince;
-  const reqPerDay=(u.requests||0)/daysSince;
-  const avgTokensPerReq=(u.requests&&u.requests>0)?Math.round(((u.promptTokens||0)+(u.completionTokens||0))/(u.requests)):0;
-
-  // Model breakdown for this user (if available)
-  const userModels=u.byModel||{};
-  const userTasks=u.byTask||{};
-  const hasModels=Object.keys(userModels).length>0;
-  const hasTasks=Object.keys(userTasks).length>0;
-
-  let modelsHTML='';
-  if(hasModels){
-    const sorted=Object.entries(userModels).sort((a,b)=>(b[1].cost||b[1].requests||0)-(a[1].cost||a[1].requests||0));
-    const maxVal=sorted[0]?sorted[0][1].cost||sorted[0][1].requests||1:1;
-    modelsHTML=`<div class="ud-section"><h4>Modely</h4>${sorted.map(([m,v])=>{
-      const pct=maxVal>0?((v.cost||v.requests||0)/maxVal*100):0;
-      return`<div class="ud-bar-row"><span class="bar-label">${shortModel(m)}</span><div class="bar-wrap"><div class="bar-fill" style="width:${pct}%;background:var(--purple)"></div></div><span class="bar-val">${v.cost?fU(v.cost):fmt(v.requests)}</span></div>`;
-    }).join('')}</div>`;
-  }
-
-  let tasksHTML='';
-  if(hasTasks){
-    const sorted=Object.entries(userTasks).sort((a,b)=>(b[1].requests||0)-(a[1].requests||0));
-    const maxVal=sorted[0]?sorted[0][1].requests||1:1;
-    tasksHTML=`<div class="ud-section"><h4>Tasky</h4>${sorted.map(([t,v])=>{
-      const pct=maxVal>0?((v.requests||0)/maxVal*100):0;
-      return`<div class="ud-bar-row"><span class="bar-label">${t}</span><div class="bar-wrap"><div class="bar-fill" style="width:${pct}%;background:var(--cyan)"></div></div><span class="bar-val">${fmt(v.requests)}</span></div>`;
-    }).join('')}</div>`;
-  }
-
-  // Cost share bar
-  const shareHTML=`<div class="ud-section"><h4>Podiel na celku</h4>
-    <div class="ud-bar-row"><span class="bar-label">Náklady</span><div class="bar-wrap"><div class="bar-fill" style="width:${costPct}%;background:var(--orange)"></div></div><span class="bar-val">${fPct(costPct)}</span></div>
-    <div class="ud-bar-row"><span class="bar-label">Requesty</span><div class="bar-wrap"><div class="bar-fill" style="width:${reqPct}%;background:var(--blue)"></div></div><span class="bar-val">${fPct(reqPct)}</span></div>
-  </div>`;
-
-  el.innerHTML=`
-    <span class="ud-close" onclick="closeUserDetail()">✕</span>
-    <div class="ud-header">
-      <div class="ud-avatar">${initials}</div>
-      <div>
-        <div class="ud-name">${name}</div>
-        <div class="ud-id">${u.id}</div>
-        <div class="ud-badges">
-          <span class="badge badge-${plan}">${plan}</span>
-          ${promo?`<span class="badge badge-promo">${promo}</span>`:''}
-          <span class="badge" style="background:var(--card2);color:var(--text2)">#${rank} podľa nákladov</span>
-        </div>
-      </div>
-    </div>
-    <div class="ud-grid">
-      <div class="ud-stat"><div class="label">Requesty</div><div class="value">${fmt(u.requests)}</div><div class="sub">${reqPerDay.toFixed(1)} / deň</div></div>
-      <div class="ud-stat"><div class="label">Náklady</div><div class="value">${fU(u.cost)}</div><div class="sub">${fU(costPerDay)} / deň</div></div>
-      <div class="ud-stat"><div class="label">Prompt tokeny</div><div class="value">${fmt(u.promptTokens)}</div><div class="sub">${avgTokensPerReq?fmt(avgTokensPerReq)+' / req':''}</div></div>
-      <div class="ud-stat"><div class="label">Completion tokeny</div><div class="value">${fmt(u.completionTokens)}</div></div>
-      <div class="ud-stat"><div class="label">Aktívnych dní</div><div class="value">${daysSince}</div><div class="sub">od ${fDateShort(firstSeen)}</div></div>
-      <div class="ud-stat"><div class="label">Posledná aktivita</div><div class="value" style="font-size:14px">${fDate(u.last_seen_at)}</div></div>
-    </div>
-    <div class="ud-meta-grid">
-      <div class="ud-meta-item"><span class="mk">Zariadenie</span>${u.device_model||'—'}</div>
-      <div class="ud-meta-item"><span class="mk">OS</span>${u.os_version||'—'}</div>
-      <div class="ud-meta-item"><span class="mk">App verzia</span>${u.app_version||'—'}</div>
-      <div class="ud-meta-item"><span class="mk">Jazyk</span>${(u.locale||'—').toUpperCase()}</div>
-    </div>
-    ${shareHTML}
-    ${modelsHTML}
-    ${tasksHTML}
-  `;
-}
-
-function renderLocale(dist){
-  document.getElementById('locale-chips').innerHTML=Object.entries(dist).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<div class="locale-chip"><strong>${k.toUpperCase()}</strong> ${v}</div>`).join('');
-}
-function renderPricing(pricing){
-  document.querySelector('#tbl-pricing tbody').innerHTML=Object.entries(pricing).map(([k,v])=>`<tr><td>${shortModel(k)}</td><td>$${v.prompt}</td><td>$${v.completion}</td></tr>`).join('');
-}
-
-// ══════════════════════════════════════════
-// PAGE 2: RAST & KAMPANE
-// ══════════════════════════════════════════
-function renderGrowthPage(){
-  const users=(dashData?.users||[]).slice();
-  const pm=getPromoDeviceMap();
-  const now=new Date();
-  const day7=new Date(now-7*864e5),day30=new Date(now-30*864e5);
-
-  // ── Sort by registration date ──
-  const withDate=users.map(u=>({...u,regDate:u.first_seen_at||u.created_at||u.last_seen_at})).filter(u=>u.regDate);
-  withDate.sort((a,b)=>new Date(a.regDate)-new Date(b.regDate));
-
-  // ── KPIs ──
-  const total=users.length;
-  const new7=withDate.filter(u=>new Date(u.regDate)>=day7).length;
-  const new30=withDate.filter(u=>new Date(u.regDate)>=day30).length;
-  const premiumCount=users.filter(u=>(u.plan||'trial')==='premium').length;
-  const byokCount=users.filter(u=>(u.plan||'trial')==='byok').length;
-  const trialCount=total-premiumCount-byokCount;
-  const convRate=total>0?((premiumCount+byokCount)/total*100):0;
-  const active7=users.filter(u=>u.last_seen_at&&new Date(u.last_seen_at)>=day7).length;
-  const active30=users.filter(u=>u.last_seen_at&&new Date(u.last_seen_at)>=day30).length;
-  const ret7=total>0?(active7/total*100):0;
-  const ret30=total>0?(active30/total*100):0;
-  const promoUsers=users.filter(u=>pm.has(u.id)).length;
-  const organicUsers=total-promoUsers;
-  const prev7=withDate.filter(u=>{const d=new Date(u.regDate);return d>=new Date(now-14*864e5)&&d<day7}).length;
-  const growthWoW=prev7>0?((new7-prev7)/prev7*100):new7>0?100:0;
-
-  document.getElementById('kpi-growth-row').innerHTML=`
-    <div class="kpi blue"><div class="kpi-label">Celkom používateľov</div><div class="kpi-value">${total}</div><div class="kpi-sub">premium: ${premiumCount} · trial: ${trialCount} · BYOK: ${byokCount}</div></div>
-    <div class="kpi green"><div class="kpi-label">Noví (7 dní)</div><div class="kpi-value">${new7}</div><div class="kpi-sub">30d: ${new30}</div><div class="kpi-trend ${growthWoW>0?'up':growthWoW<0?'down':'flat'}">${growthWoW>0?'↑':growthWoW<0?'↓':'→'} ${Math.abs(growthWoW).toFixed(0)}% WoW</div></div>
-    <div class="kpi orange"><div class="kpi-label">Konverzia</div><div class="kpi-value">${fPct(convRate)}</div><div class="kpi-sub">trial → premium+BYOK</div></div>
-    <div class="kpi purple"><div class="kpi-label">Z promo kódov</div><div class="kpi-value">${promoUsers}</div><div class="kpi-sub">organic: ${organicUsers}</div></div>
-    <div class="kpi cyan"><div class="kpi-label">Retencia 7d</div><div class="kpi-value">${fPct(ret7)}</div><div class="kpi-sub">${active7} z ${total} aktívnych</div></div>
-    <div class="kpi yellow"><div class="kpi-label">Retencia 30d</div><div class="kpi-value">${fPct(ret30)}</div><div class="kpi-sub">${active30} z ${total} aktívnych</div></div>
-  `;
-
-  // ── Registration daily chart ──
-  const regByDay={};
-  withDate.forEach(u=>{const d=(u.regDate).split('T')[0];regByDay[d]=(regByDay[d]||0)+1});
-  const regSorted=Object.entries(regByDay).sort((a,b)=>a[0].localeCompare(b[0]));
-  const regLabels=regSorted.map(([d])=>d.slice(5));
-  const regData=regSorted.map(([,c])=>c);
-
-  destroyChart('reg-daily');
-  charts['reg-daily']=new Chart(document.getElementById('chart-reg-daily'),{type:'bar',data:{labels:regLabels,datasets:[
-    {label:'Noví',data:regData,backgroundColor:'rgba(34,197,94,.7)',borderRadius:4}
-  ]},options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#9393a0',font:{size:11}},grid:{color:'#1e1e2e'}},y:{ticks:{color:'#9393a0',stepSize:1},grid:{color:'#1e1e2e'}}}}});
-
-  // ── Cumulative growth chart ──
-  let cum=0;const cumData=regData.map(v=>{cum+=v;return cum});
-  destroyChart('reg-cumul');
-  charts['reg-cumul']=new Chart(document.getElementById('chart-reg-cumul'),{type:'line',data:{labels:regLabels,datasets:[
-    {label:'Celkom',data:cumData,borderColor:'var(--blue)',backgroundColor:'rgba(59,130,246,.1)',fill:true,tension:.3,pointRadius:2,borderWidth:2}
-  ]},options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#9393a0',font:{size:11}},grid:{color:'#1e1e2e'}},y:{ticks:{color:'#9393a0'},grid:{color:'#1e1e2e'}}}}});
-
-  // ── Plan distribution doughnut ──
-  destroyChart('plan-dist');
-  charts['plan-dist']=new Chart(document.getElementById('chart-plan-dist'),{type:'doughnut',data:{
-    labels:['Trial','Premium','BYOK'],
-    datasets:[{data:[trialCount,premiumCount,byokCount],backgroundColor:['rgba(249,115,22,.7)','rgba(34,197,94,.7)','rgba(59,130,246,.7)'],borderWidth:0}]
-  },options:{responsive:true,plugins:{legend:{position:'bottom',labels:{color:'#e4e4e7',font:{size:12},padding:10}}},cutout:'60%'}});
-
-  // ── Conversion funnel ──
-  const funnelEl=document.getElementById('funnel-visual');
-  const fSteps=[
-    {label:'Registrácia',val:total,color:'var(--blue)'},
-    {label:'Aktívni 7d',val:active7,color:'var(--cyan)'},
-    {label:'Premium',val:premiumCount,color:'var(--green)'},
-    {label:'BYOK',val:byokCount,color:'var(--purple)'}
-  ];
-  const maxF=Math.max(total,1);
-  funnelEl.innerHTML='<div class="funnel">'+fSteps.map((s,i)=>{
-    const pct=Math.max(8,(s.val/maxF)*100);
-    const dropoff=i>0&&fSteps[i-1].val>0?((1-s.val/fSteps[i-1].val)*100).toFixed(0)+'% odpad':'';
-    return(i>0?`<div class="funnel-arrow">↓ ${dropoff}</div>`:'')+
-    `<div class="funnel-step"><span class="funnel-label">${s.label}</span><div class="funnel-bar" style="width:${pct}%;background:${s.color}">${s.val}</div><span class="funnel-val">${(s.val/maxF*100).toFixed(0)}%</span></div>`;
-  }).join('')+'</div>';
-
-  // ── Retention KPIs (already in main KPIs, add detail) ──
-  const churned=users.filter(u=>u.last_seen_at&&new Date(u.last_seen_at)<day30).length;
-  const churnRate=total>0?(churned/total*100):0;
-  const avgDays=withDate.length>0?(withDate.reduce((s,u)=>{
-    const fs=new Date(u.regDate),ls=new Date(u.last_seen_at||now);
-    return s+Math.max(1,Math.ceil((ls-fs)/864e5));
-  },0)/withDate.length):0;
-  document.getElementById('kpi-retention-row').innerHTML=`
-    <div class="kpi green"><div class="kpi-label">Aktívni dnes</div><div class="kpi-value">${users.filter(u=>u.last_seen_at&&new Date(u.last_seen_at).toDateString()===now.toDateString()).length}</div></div>
-    <div class="kpi blue"><div class="kpi-label">Aktívni 7d</div><div class="kpi-value">${active7}</div><div class="kpi-sub">${fPct(ret7)} z celku</div></div>
-    <div class="kpi orange"><div class="kpi-label">Aktívni 30d</div><div class="kpi-value">${active30}</div><div class="kpi-sub">${fPct(ret30)} z celku</div></div>
-    <div class="kpi red"><div class="kpi-label">Churn (30d+)</div><div class="kpi-value">${churned}</div><div class="kpi-sub">${fPct(churnRate)}</div></div>
-    <div class="kpi purple"><div class="kpi-label">Ø životnosť</div><div class="kpi-value">${avgDays.toFixed(0)}d</div><div class="kpi-sub">priemer dní aktivity</div></div>
-  `;
-
-  // ── Campaign source table ──
-  const sources=new Map();
-  users.forEach(u=>{
-    const src=pm.has(u.id)?pm.get(u.id):'Organic';
-    if(!sources.has(src))sources.set(src,{users:[],premium:0,req:0,cost:0,active7:0});
-    const s=sources.get(src);
-    s.users.push(u);
-    if((u.plan||'trial')==='premium'||(u.plan||'trial')==='byok')s.premium++;
-    s.req+=(u.requests||0);
-    s.cost+=(u.cost||0);
-    if(u.last_seen_at&&new Date(u.last_seen_at)>=day7)s.active7++;
-  });
-  const srcRows=[...sources.entries()].sort((a,b)=>b[1].users.length-a[1].users.length);
-  document.querySelector('#tbl-campaigns tbody').innerHTML=srcRows.map(([name,s])=>{
-    const conv=s.users.length>0?(s.premium/s.users.length*100):0;
-    const avgC=s.users.length>0?s.cost/s.users.length:0;
-    const ret=s.users.length>0?(s.active7/s.users.length*100):0;
-    const isPromo=name!=='Organic';
-    return`<tr><td>${isPromo?`<span class="badge badge-promo">${name}</span>`:`<span class="badge" style="background:var(--card2);color:var(--text2)">${name}</span>`}</td><td><strong>${s.users.length}</strong></td><td>${fPct(conv)}</td><td>${fmt(s.req)}</td><td>${fU(s.cost)}</td><td>${fU(avgC)}</td><td>${fPct(ret)}</td></tr>`;
-  }).join('')||'<tr><td colspan="7" class="empty">Žiadne dáta</td></tr>';
-
-  // ── Weekly cohorts ──
-  renderCohorts(withDate);
-
-  // ── Newest users table ──
-  const newest=[...withDate].reverse().slice(0,20);
-  document.querySelector('#tbl-new-users tbody').innerHTML=newest.map(u=>{
-    const src=pm.has(u.id)?pm.get(u.id):'Organic';
-    const isP=src!=='Organic';
-    return`<tr><td>${u.display_name||shortId(u.id)}</td><td>${u.device_model||'—'}</td><td><span class="badge badge-${u.plan||'trial'}">${u.plan||'trial'}</span></td><td>${isP?`<span class="badge badge-promo">${src}</span>`:'Organic'}</td><td>${fDate(u.regDate)}</td><td>${fDate(u.last_seen_at)}</td><td>${fmt(u.requests)}</td><td>${fU(u.cost)}</td></tr>`;
-  }).join('')||'<tr><td colspan="8" class="empty">Žiadni používatelia</td></tr>';
-}
-
-// Locale → country mapping
-const LOCALE_COUNTRY={
-  'sk':'SK','cs':'CZ','en':'US','en-us':'US','en-gb':'GB','de':'DE','de-at':'AT','de-ch':'CH',
-  'pl':'PL','hu':'HU','fr':'FR','es':'ES','it':'IT','pt':'PT','pt-br':'BR','nl':'NL','ro':'RO',
-  'bg':'BG','hr':'HR','sl':'SI','sr':'RS','uk':'UA','ru':'RU','ja':'JP','ko':'KR','zh':'CN',
-  'ar':'SA','tr':'TR','sv':'SE','da':'DK','fi':'FI','no':'NO','nb':'NO','el':'GR','he':'IL',
-  'th':'TH','vi':'VN','id':'ID','ms':'MY','hi':'IN','bn':'IN','ta':'IN'
-};
+// Krajiny
 const COUNTRY_NAME={
   SK:'Slovensko',CZ:'Česko',US:'USA',GB:'Veľká Británia',DE:'Nemecko',AT:'Rakúsko',CH:'Švajčiarsko',
   PL:'Poľsko',HU:'Maďarsko',FR:'Francúzsko',ES:'Španielsko',IT:'Taliansko',PT:'Portugalsko',
   BR:'Brazília',NL:'Holandsko',RO:'Rumunsko',BG:'Bulharsko',HR:'Chorvátsko',SI:'Slovinsko',
   RS:'Srbsko',UA:'Ukrajina',RU:'Rusko',JP:'Japonsko',KR:'Kórea',CN:'Čína',SA:'Saudská Arábia',
   TR:'Turecko',SE:'Švédsko',DK:'Dánsko',FI:'Fínsko',NO:'Nórsko',GR:'Grécko',IL:'Izrael',
-  TH:'Thajsko',VN:'Vietnam',ID:'Indonézia',MY:'Malajzia',IN:'India'
+  TH:'Thajsko',VN:'Vietnam',ID:'Indonézia',MY:'Malajzia',IN:'India',IE:'Írsko',SG:'Singapur',
+  BE:'Belgicko',LU:'Luxembursko',CA:'Kanada',AU:'Austrália',AE:'SAE',MX:'Mexiko',IS:'Island',
+  EE:'Estónsko',LV:'Lotyšsko',LT:'Litva'
 };
 const COUNTRY_FLAG=c=>{
   try{return String.fromCodePoint(...[...c.toUpperCase()].map(ch=>0x1F1E6-65+ch.charCodeAt(0)))}catch(e){return'🌐'}
 };
+const countryLabel=c=>c?`${COUNTRY_FLAG(c)} ${esc(COUNTRY_NAME[c]||c)}`:'<span class="muted">—</span>';
 // ISO 3166-1 alpha-2 → alpha-3 for Natural Earth style IDs
 const A2_TO_A3={
   SK:'SVK',CZ:'CZE',US:'USA',GB:'GBR',DE:'DEU',AT:'AUT',CH:'CHE',PL:'POL',HU:'HUN',FR:'FRA',
   ES:'ESP',IT:'ITA',PT:'PRT',BR:'BRA',NL:'NLD',RO:'ROU',BG:'BGR',HR:'HRV',SI:'SVN',RS:'SRB',
   UA:'UKR',RU:'RUS',JP:'JPN',KR:'KOR',CN:'CHN',SA:'SAU',TR:'TUR',SE:'SWE',DK:'DNK',FI:'FIN',
-  NO:'NOR',GR:'GRC',IL:'ISR',TH:'THA',VN:'VNM',ID:'IDN',MY:'MYS',IN:'IND'
+  NO:'NOR',GR:'GRC',IL:'ISR',TH:'THA',VN:'VNM',ID:'IDN',MY:'MYS',IN:'IND',IE:'IRL',SG:'SGP',
+  BE:'BEL',LU:'LUX',CA:'CAN',AU:'AUS',AE:'ARE',MX:'MEX',IS:'ISL',EE:'EST',LV:'LVA',LT:'LTU'
 };
 
 let _worldGeo=null;
@@ -1218,10 +1058,7 @@ async function renderGeoMap(users){
   // ── Aggregate by country (alpha-2) ──
   const byCountry={};
   users.forEach(u=>{
-    const loc=(u.locale||'').toLowerCase().trim();
-    const cc=LOCALE_COUNTRY[loc]||LOCALE_COUNTRY[loc.split('-')[0]]||LOCALE_COUNTRY[loc.split('_')[0]];
-    if(cc){byCountry[cc]=(byCountry[cc]||0)+1}
-    else if(loc){byCountry[loc.toUpperCase()]=(byCountry[loc.toUpperCase()]||0)+1}
+    if(u.country)byCountry[u.country]=(byCountry[u.country]||0)+1;
   });
   const sorted=Object.entries(byCountry).sort((a,b)=>b[1]-a[1]);
   const maxCount=sorted.length>0?sorted[0][1]:1;
@@ -1241,7 +1078,7 @@ async function renderGeoMap(users){
   const legendEl=document.getElementById('map-legend');
   const grad='linear-gradient(to right,#1a1a28,rgba(249,115,22,.3),rgba(249,115,22,.65),#f97316)';
   legendEl.innerHTML=`
-    <span style="font-size:11px;color:var(--text2)"><strong style="color:var(--text)">${totalMapped}</strong> users</span>
+    <span style="font-size:11px;color:var(--text2)"><strong style="color:var(--text)">${totalMapped}</strong> používateľov</span>
     <div class="map-legend-bar"><span>0</span><div class="map-legend-gradient" style="background:${grad}"></div><span>${maxCount}</span></div>`;
 
   // ── Load TopoJSON (cache) ──
@@ -1399,7 +1236,7 @@ async function renderGeoMap(users){
       <span class="map-sb-flag">${flag}</span>
       <div class="map-sb-info">
         <div class="map-sb-name">${name}</div>
-        <div class="map-sb-sub">${pct}% · ${count} user${count!==1?'s':''}</div>
+        <div class="map-sb-sub">${pct}% · ${count} ${plural(count,'používateľ','používatelia','používateľov')}</div>
       </div>
       <span class="map-sb-val">${count}</span>
     </div>
@@ -1429,147 +1266,54 @@ async function renderGeoMap(users){
   });
 }
 
-function renderCohorts(withDate){
-  if(!withDate.length){document.getElementById('cohort-table-wrap').innerHTML='<div class="empty">Nedostatok dát pre kohorty</div>';return}
-  const now=new Date();
-  // Group by ISO week
-  const getWeek=d=>{const dt=new Date(d);const day=dt.getDay()||7;dt.setDate(dt.getDate()+4-day);const yr=new Date(dt.getFullYear(),0,1);return dt.getFullYear()+'-W'+String(Math.ceil(((dt-yr)/864e5+1)/7)).padStart(2,'0')};
-  const cohorts=new Map();
-  withDate.forEach(u=>{
-    const w=getWeek(u.regDate);
-    if(!cohorts.has(w))cohorts.set(w,[]);
-    cohorts.get(w).push(u);
-  });
-  const weeks=[...cohorts.keys()].sort().slice(-8); // last 8 weeks
-  const retWeeks=[0,1,2,3,4]; // W0, W+1, W+2, W+3, W+4
-
-  let html='<table class="cohort-table"><thead><tr><th>Kohorta</th><th>Registrácie</th>';
-  retWeeks.forEach(w=>html+=`<th>T+${w}</th>`);
-  html+='</tr></thead><tbody>';
-
-  weeks.forEach(week=>{
-    const cohort=cohorts.get(week)||[];
-    const weekStart=(() => {
-      const [y,w]=week.split('-W').map(Number);
-      const jan4=new Date(y,0,4);
-      const d=jan4.getDate()-jan4.getDay()+1+(w-1)*7;
-      return new Date(y,0,d);
-    })();
-    html+=`<tr><td style="font-weight:600">${week}<div style="font-size:10px;color:var(--text3)">${fDateShort(weekStart)}</div></td><td><strong>${cohort.length}</strong></td>`;
-    retWeeks.forEach(rw=>{
-      const periodStart=new Date(weekStart.getTime()+rw*7*864e5);
-      const periodEnd=new Date(periodStart.getTime()+7*864e5);
-      if(periodStart>now){html+='<td>—</td>';return}
-      const active=cohort.filter(u=>u.last_seen_at&&new Date(u.last_seen_at)>=periodStart&&new Date(u.last_seen_at)<periodEnd).length;
-      // For W0 also count users active during registration week
-      const activeW0=rw===0?cohort.filter(u=>u.last_seen_at&&new Date(u.last_seen_at)>=weekStart).length:active;
-      const rate=cohort.length>0?((rw===0?activeW0:active)/cohort.length*100):0;
-      const bg=rate>70?'rgba(34,197,94,.25)':rate>40?'rgba(249,115,22,.2)':rate>10?'rgba(234,179,8,.15)':'rgba(239,68,68,.1)';
-      html+=`<td><div class="cohort-cell" style="background:${bg}">${fPct(rate)}<div style="font-size:10px;color:var(--text3)">${rw===0?activeW0:active}/${cohort.length}</div></div></td>`;
-    });
-    html+='</tr>';
-  });
-  html+='</tbody></table>';
-  document.getElementById('cohort-table-wrap').innerHTML=html;
-}
-
 // ══════════════════════════════════════════
-// PAGE 3: PROMO & MARKETING
+// PAGE 4: AI NÁKLADY
 // ══════════════════════════════════════════
-function renderPromoPage(){
-  const codes=promoData.codes,reds=promoData.redemptions;
-  const activeCodes=codes.filter(c=>c.is_active);
-  const totalReds=reds.length;
-  const totalCap=codes.reduce((s,c)=>s+c.max_uses,0);
-  const usageRate=totalCap>0?(totalReds/totalCap)*100:0;
-  const uniqueDevs=new Set(reds.map(r=>r.device_id)).size;
-  const now=new Date();
-  const activePromo=reds.filter(r=>r.premium_until&&new Date(r.premium_until)>now).length;
-
-  // KPIs
-  document.getElementById('kpi-promo-row').innerHTML=`
-    <div class="kpi orange"><div class="kpi-label">Aktívne kódy</div><div class="kpi-value">${activeCodes.length}</div><div class="kpi-sub">z ${codes.length} celkom</div></div>
-    <div class="kpi green"><div class="kpi-label">Redemptions</div><div class="kpi-value">${totalReds}</div><div class="kpi-sub">${uniqueDevs} unikátnych zariadení</div></div>
-    <div class="kpi blue"><div class="kpi-label">Využitie kapacity</div><div class="kpi-value">${fPct(usageRate)}</div><div class="kpi-sub">${totalReds} / ${totalCap} max</div></div>
-    <div class="kpi purple"><div class="kpi-label">Aktívni promo</div><div class="kpi-value">${activePromo}</div><div class="kpi-sub">s platným premium z promo</div></div>
+function renderAiPage(){
+  const d=dashData,t=d.totals||{},key=d.openRouter?.key,cr=d.openRouter?.credits;
+  const periodLabel={7:'za 7 dní',30:'za 30 dní',90:'za 90 dní',all:'od začiatku'}[currentPeriod];
+  document.getElementById('kpi-ai-row').innerHTML=`
+    <div class="kpi red"><div class="kpi-label">Náklady ${periodLabel}</div><div class="kpi-value">${fU(t.cost||0)}</div><div class="kpi-sub">vypočítané z tokenov a cien OpenRouter</div></div>
+    <div class="kpi blue"><div class="kpi-label">Požiadavky</div><div class="kpi-value">${fmt(t.requests||0)}</div><div class="kpi-sub">${fmt(t.promptTokens||0)} vstup · ${fmt(t.completionTokens||0)} výstup</div></div>
+    <div class="kpi purple"><div class="kpi-label">Priemer na požiadavku</div><div class="kpi-value">${fU(t.requests?t.cost/t.requests:0)}</div></div>
+    <div class="kpi orange"><div class="kpi-label">Kľúč Subten tento mesiac</div><div class="kpi-value">${key?fU(key.usageMonthly):'—'}</div><div class="kpi-sub">${key?`dnes ${fU(key.usageDaily)} · spolu ${fU(key.usage)}`:'nedostupné'}</div></div>
+    <div class="kpi green"><div class="kpi-label">Kredit OpenRouter</div><div class="kpi-value">${cr?fU(cr.remaining):'—'}</div><div class="kpi-sub">${cr?`minuté ${fU(cr.used)} z ${fU(cr.total)}`:'nezobrazený, treba správcovský kľúč'}</div></div>
   `;
+  const unpriced=d.unpricedModels||[];
+  document.getElementById('ai-notice').innerHTML=unpriced.length?`<div class="notice warn">Bez ceny, takže v nákladoch chýbajú: ${unpriced.map(m=>esc(shortModel(m))).join(', ')}</div>`:'';
 
-  // Promo cards
-  document.getElementById('promo-grid').innerHTML=codes.map(c=>{
-    const pct=c.max_uses?(c.used_count/c.max_uses)*100:0;
-    const sc=!c.is_active?'var(--red)':pct>=100?'var(--yellow)':'var(--green)';
-    const cr=reds.filter(r=>r.code_id===c.id);
-    return`<div class="promo-card">
-      <div class="promo-status" style="background:${sc}"></div>
-      <div class="code">${c.code}</div>
-      <div class="meta">${c.duration_days}d ${c.benefit_type} · ${c.note||''}</div>
-      <div style="margin-top:8px"><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text2);margin-bottom:3px"><span>${c.used_count}/${c.max_uses}</span><span>${fPct(pct)}</span></div>
-      <div class="progress-bar" style="height:6px"><div class="fill" style="width:${pct}%;background:${sc}"></div></div></div>
-      <div class="stats"><div><span class="n">${cr.length}</span>použití</div><div><span class="n">${c.duration_days}d</span>trvanie</div></div>
-    </div>`;
-  }).join('')||'<div class="empty">Žiadne promo kódy</div>';
+  const daily=d.daily||[],labels=daily.map(x=>fDay(x.date));
+  destroyChart('daily-cost');
+  charts['daily-cost']=new Chart(document.getElementById('chart-daily-cost'),{type:'line',data:{labels,datasets:[{label:'Náklady',data:daily.map(x=>x.cost),borderColor:'#f97316',backgroundColor:'rgba(249,115,22,.12)',fill:true,tension:.3,pointRadius:2,borderWidth:2}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{x:axis({maxTicksLimit:10}),y:axis({callback:v=>'$'+v.toFixed(3)})}}});
+  destroyChart('daily-req');
+  charts['daily-req']=new Chart(document.getElementById('chart-daily-req'),{type:'bar',data:{labels,datasets:[{label:'Požiadavky',data:daily.map(x=>x.requests),backgroundColor:'rgba(59,130,246,.7)',borderRadius:4}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{x:axis({maxTicksLimit:10}),y:axis({precision:0})}}});
+  const models=Object.entries(d.byModel||{}).sort((a,b)=>b[1].cost-a[1].cost);
+  destroyChart('model');
+  charts['model']=new Chart(document.getElementById('chart-model'),{type:'doughnut',data:{labels:models.map(([k])=>shortModel(k)),datasets:[{data:models.map(([,v])=>v.cost||0),backgroundColor:CC.slice(0,models.length),borderWidth:0}]},options:{responsive:true,plugins:{legend:{position:'bottom',labels:{color:'#e4e4e7',font:{size:11},padding:8}}},cutout:'60%'}});
+  const tasks=Object.entries(d.byTask||{}).sort((a,b)=>b[1].requests-a[1].requests);
+  destroyChart('task');
+  charts['task']=new Chart(document.getElementById('chart-task'),{type:'bar',data:{labels:tasks.map(([k])=>k),datasets:[{label:'Požiadavky',data:tasks.map(([,v])=>v.requests),backgroundColor:'rgba(168,85,247,.7)',borderRadius:4}]},options:{indexAxis:'y',responsive:true,plugins:{legend:{display:false}},scales:{x:axis({precision:0}),y:axis()}}});
 
-  // Timeline chart
-  renderPromoTimeline(reds);
-
-  // Promo users table
-  renderPromoUsers();
-
-  // Detail table
-  renderPromoDetail();
+  renderUsageTable('tbl-models',d.byModel||{},shortModel);
+  renderUsageTable('tbl-tasks',d.byTask||{});
 }
 
-function renderPromoTimeline(reds){
-  destroyChart('promo-timeline');
-  if(!reds.length){return}
-  const byDate={};
-  reds.forEach(r=>{const d=(r.redeemed_at||'').split('T')[0];if(d)byDate[d]=(byDate[d]||0)+1});
-  const sorted=Object.entries(byDate).sort((a,b)=>a[0].localeCompare(b[0]));
-  const labels=sorted.map(([d])=>d.slice(5)),data=sorted.map(([,c])=>c);
-  let cum=0;const cumData=data.map(v=>{cum+=v;return cum});
-  charts['promo-timeline']=new Chart(document.getElementById('chart-promo-timeline'),{type:'bar',data:{labels,datasets:[
-    {label:'Denne',data,backgroundColor:'rgba(168,85,247,.6)',borderRadius:4,yAxisID:'y'},
-    {label:'Kumulatívne',data:cumData,type:'line',borderColor:'var(--orange)',pointRadius:2,borderWidth:2,yAxisID:'y1',fill:false}
-  ]},options:{responsive:true,plugins:{legend:{labels:{color:'#e4e4e7'}}},scales:{x:{ticks:{color:'#9393a0',font:{size:11}},grid:{color:'#1e1e2e'}},y:{position:'left',ticks:{color:'#9393a0'},grid:{color:'#1e1e2e'}},y1:{position:'right',ticks:{color:'#9393a0'},grid:{display:false}}}}});
-}
-
-function renderPromoUsers(){
-  const filtered=getFilteredUsers();
-  const pm=getPromoDeviceMap();
-  const tbody=document.querySelector('#tbl-promo-users tbody');
-  const planBadge=p=>`<span class="badge badge-${p}">${p}</span>`;
-  tbody.innerHTML=filtered.sort((a,b)=>(b.cost||0)-(a.cost||0)).map(u=>{
-    const promo=pm.get(u.id);
-    return`<tr><td>${u.display_name||shortId(u.id)}</td><td>${u.device_model||'—'}</td><td>${promo?`<span class="badge badge-promo">${promo}</span>`:'—'}</td><td>${planBadge(u.plan||'trial')}</td><td>${fmt(u.requests)}</td><td>${fU(u.cost)}</td><td>${fDate(u.last_seen_at)}</td></tr>`;
-  }).join('')||'<tr><td colspan="7" class="empty">Žiadni používatelia pre tento filter</td></tr>';
-}
-
-function renderPromoDetail(){
-  const tbody=document.querySelector('#tbl-promo tbody');
-  tbody.innerHTML=promoData.codes.map(c=>{
-    const pct=c.max_uses?(c.used_count/c.max_uses)*100:0;
-    let status,cls;
-    if(!c.is_active){status='Neaktívny';cls='inactive'}
-    else if(c.expires_at&&new Date(c.expires_at)<new Date()){status='Expirovaný';cls='expired'}
-    else if(c.used_count>=c.max_uses){status='Vyčerpaný';cls='expired'}
-    else{status='Aktívny';cls='active'}
-    return`<tr><td><strong style="font-family:monospace;letter-spacing:.5px">${c.code}</strong></td><td>${c.benefit_type}</td><td>${c.duration_days}d</td><td>${c.used_count}</td><td>${c.max_uses}</td>
-      <td><div style="display:flex;align-items:center;gap:6px"><div class="progress-bar" style="width:50px;height:5px"><div class="fill" style="width:${pct}%;background:${pct>=100?'var(--yellow)':'var(--green)'}"></div></div>${fPct(pct)}</div></td>
-      <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis">${c.note||'—'}</td><td><span class="badge badge-${cls}">${status}</span></td><td>${fDateShort(c.created_at)}</td><td>${c.expires_at?fDateShort(c.expires_at):'∞'}</td></tr>`;
-  }).join('')||'<tr><td colspan="10" class="empty">Žiadne promo kódy</td></tr>';
+function renderUsageTable(id,obj,keyFn){
+  const rows=Object.entries(obj).sort((a,b)=>(b[1].cost||0)-(a[1].cost||0));
+  document.querySelector('#'+id+' tbody').innerHTML=rows.map(([k,v])=>`<tr><td>${esc(keyFn?keyFn(k):k)}</td><td class="num">${fmt(v.requests)}</td><td class="num">${fmt(v.promptTokens)}</td><td class="num">${fmt(v.completionTokens)}</td><td class="num">${fU(v.cost)}</td></tr>`).join('')||'<tr><td colspan="5" class="empty">Žiadne dáta</td></tr>';
 }
 
 // ── EXPORT CSV ──
 function exportCSV(){
   if(!dashData)return;
-  // Export the currently visible (filtered) set so what you see is what you get.
-  const users=applyUserTblFilters(getOverviewUsers()),pm=getPromoDeviceMap();
-  let csv='Meno,Email,ID,Zariadenie,OS,App,Lokál,Plán,Promo,Requesty,Náklady,Registrácia,Posledná aktivita\n';
-  users.forEach(u=>{csv+=`"${u.display_name||shortId(u.id)}","${u.email||''}","${u.fullId||u.id||''}","${u.device_model||''}","${u.os_version||''}","${u.app_version||''}","${u.locale||''}","${u.plan||'trial'}","${u.promo||pm.get(u.id)||''}",${u.requests||0},${(u.cost||0).toFixed(4)},"${fDateShort(u.created_at)}","${fDate(u.last_seen_at)}"\n`});
-  csv+='\nPromo kódy\nKód,Typ,Trvanie,Použité,Max,Poznámka,Stav\n';
-  promoData.codes.forEach(c=>{const st=!c.is_active?'Neaktívny':c.used_count>=c.max_uses?'Vyčerpaný':'Aktívny';csv+=`"${c.code}","${c.benefit_type}",${c.duration_days},${c.used_count},${c.max_uses},"${c.note||''}","${st}"\n`});
+  // Export zobrazených riadkov: čo vidíš vo filtri, to dostaneš
+  const q=v=>`"${String(v??'').replace(/"/g,'""')}"`;
+  let csv='Email,Meno,ID,Interný,Platforma,Zariadenie,OS,App,Krajina,Stav,Obnova,AI požiadavky,AI náklady USD,Registrácia,Posledná aktivita\n';
+  visibleUsers().forEach(u=>{
+    csv+=[u.email,u.display_name,u.fullId,u.internal?'áno':'',u.platform,u.device_model,u.os_version,u.app_version,u.country,STATUS[u.status]?.label,u.premium_expires_at?fDateShort(u.premium_expires_at):'',u.requests||0,(u.cost||0).toFixed(4),fDateShort(u.created_at),fDate(u.last_seen_at)].map(q).join(',')+'\n';
+  });
   const blob=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8;'});
-  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='subten-export-'+new Date().toISOString().slice(0,10)+'.csv';a.click();
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='subten-pouzivatelia-'+todayKey()+'.csv';a.click();
 }
 
 // ── INIT ──
