@@ -432,6 +432,7 @@ details.archive .table-card{margin-top:8px}
             <option value="all">Všetky</option>
             <option value="ios">iOS</option>
             <option value="android">Android</option>
+            <option value="unknown">Neznáma</option>
           </select>
         </label>
         <label class="field">Krajina <select id="utf-country" onchange="onUserTblFilter()"><option value="all">Všetky</option></select></label>
@@ -443,6 +444,7 @@ details.archive .table-card{margin-top:8px}
         <span class="utf-count" id="utf-count"></span>
       </div>
       <div class="table-card"><table id="tbl-users"><thead><tr><th>Používateľ</th><th>Zariadenie</th><th>App</th><th>Krajina</th><th>Stav</th><th>Registrácia</th><th>Posledná aktivita</th><th>AI požiadavky</th><th>AI náklady</th></tr></thead><tbody></tbody></table></div>
+      <div class="table-note">Android zatiaľ neposiela zariadenie, verziu ani krajinu, jeho platforma a posledná aktivita sú z prihlásenia. Neznáma platforma znamená účet bez prihlásenia v appke.</div>
 
       <!-- GEO MAP (Power BI style) -->
       <div class="section-title">🌍 Mapa používateľov</div>
@@ -669,7 +671,8 @@ function adAccounts(){
   adCampaigns().forEach(c=>(c.countries||[]).forEach(cc=>{
     if(c.start_date&&(!firstByCountry[cc]||c.start_date<firstByCountry[cc]))firstByCountry[cc]=c.start_date;
   }));
-  return{firstByCountry,users:realUsers().filter(u=>firstByCountry[u.country]&&dayKey(u.created_at)>=firstByCountry[u.country])};
+  // Reklama zatiaľ beží len v Apple Ads, takže sa rátajú iba účty z iPhonu.
+  return{firstByCountry,users:realUsers().filter(u=>u.platform==='ios'&&firstByCountry[u.country]&&dayKey(u.created_at)>=firstByCountry[u.country])};
 }
 
 // ── RENDER ──
@@ -725,20 +728,21 @@ function renderAlerts(){
 function renderOverviewPage(){
   const d=dashData,users=realUsers(),r=d.revenue||{};
   const total=users.length,internal=allUsers().length-total;
-  const ios=users.filter(u=>u.platform==='ios').length,android=users.filter(u=>u.platform==='android').length;
+  const ios=users.filter(u=>u.platform==='ios').length,android=users.filter(u=>u.platform==='android').length,unknown=total-ios-android;
   const today=users.filter(u=>u.created_at&&dayKey(u.created_at)===todayKey()).length;
   const new7=users.filter(u=>createdWithin(u,7)).length;
   const prev7=users.filter(u=>createdWithin(u,14)&&!createdWithin(u,7)).length;
   const act7=users.filter(u=>activeWithin(u,7)).length,act30=users.filter(u=>activeWithin(u,30)).length;
+  const act7android=users.filter(u=>u.platform==='android'&&activeWithin(u,7)).length;
   const paying=(r.yearly||0)+(r.monthly||0);
   const ads=sumRows(adRows()),acc=adAccounts();
   const first=adsFirstDay();
   const trend=new7>prev7?'up':new7<prev7?'down':'flat';
 
   document.getElementById('kpi-row').innerHTML=`
-    <div class="kpi blue"><div class="kpi-label">Používatelia</div><div class="kpi-value">${total}</div><div class="kpi-sub">iOS ${ios} · Android ${android}${internal?` · bez ${internal} interných`:''}</div></div>
+    <div class="kpi blue"><div class="kpi-label">Používatelia</div><div class="kpi-value">${total}</div><div class="kpi-sub">iOS ${ios} · Android ${android}${unknown?` · neznáme ${unknown}`:''}${internal?` · bez ${internal} interných`:''}</div></div>
     <div class="kpi green"><div class="kpi-label">Noví za 7 dní</div><div class="kpi-value">${new7}</div><div class="kpi-sub">dnes ${today} · týždeň predtým ${prev7}</div><div class="kpi-trend ${trend}">${trend==='up'?'↑':trend==='down'?'↓':'→'}</div></div>
-    <div class="kpi cyan"><div class="kpi-label">Aktívni za 7 dní</div><div class="kpi-value">${act7}</div><div class="kpi-sub">za 30 dní ${act30}</div></div>
+    <div class="kpi cyan"><div class="kpi-label">Aktívni za 7 dní</div><div class="kpi-value">${act7}</div><div class="kpi-sub">z toho Android ${act7android} · za 30 dní ${act30}</div></div>
     <div class="kpi green"><div class="kpi-label">Platia</div><div class="kpi-value">${paying}</div><div class="kpi-sub">ročné ${r.yearly||0} · mesačné ${r.monthly||0} · v skúške zadarmo ${r.freePeriod||0}</div></div>
     <div class="kpi purple"><div class="kpi-label">Príjem za mesiac (odhad)</div><div class="kpi-value">${fE(r.estimatedMonthlyEur||0)}</div><div class="kpi-sub">len platiaci, z cenníka, pred províziou a DPH</div></div>
     <div class="kpi orange"><div class="kpi-label">Reklama spolu</div><div class="kpi-value">${fE(ads.spend)}</div><div class="kpi-sub">${ads.installs} stiahnutí · ${fE(perUnit(ads.spend,ads.installs))} za jedno</div></div>
@@ -758,7 +762,7 @@ function renderPlan(){
   const p=dashData.plan,el=document.getElementById('plan-card');
   if(!p){el.style.display='none';return}
   const countries=new Set(p.countries);
-  const count=realUsers().filter(u=>countries.has(u.country)&&u.created_at&&dayKey(u.created_at)>=p.start).length;
+  const count=realUsers().filter(u=>(countries.has(u.country)||(!u.country&&u.platform==='android'))&&u.created_at&&dayKey(u.created_at)>=p.start).length;
   const t=todayKey();
   const week=p.weeks.find(w=>w.end>=t)||p.weeks[p.weeks.length-1];
   const missing=week.target-count;
@@ -975,7 +979,7 @@ function visibleUsers(){
   return allUsers().filter(u=>{
     if(!f.internal&&u.internal)return false;
     if(f.status!=='all'&&u.status!==f.status)return false;
-    if(f.platform!=='all'&&u.platform!==f.platform)return false;
+    if(f.platform!=='all'&&(u.platform||'unknown')!==f.platform)return false;
     if(f.country!=='all'&&u.country!==f.country)return false;
     if(f.q){
       const hay=[u.email,u.id,u.fullId,u.display_name].filter(Boolean).join(' ').toLowerCase();
