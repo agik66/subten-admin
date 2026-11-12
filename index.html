@@ -813,7 +813,7 @@ function renderStore(){
   const since=new Date(Date.now()-30*864e5).toLocaleDateString('sv');
   const trials=isMetric('event:Start Introductory Offer');
   const firstPaid=isMetric('event:Paid Subscription from Introductory Offer','event:Subscribe');
-  const renewed=isMetric('event:Renew');
+  const renewed=isMetric('event:Renew','event:Renewal from Billing Retry');
   const canceled=m=>m.startsWith('event:Cancel');
   const kpi=(cls,label,test,extra='')=>`<div class="kpi ${cls}"><div class="kpi-label">${label}</div><div class="kpi-value">${fmt(storeSum(test))}</div><div class="kpi-sub">za 30 dní ${fmt(storeSum(test,since))}${extra}</div></div>`;
   const a=storeActive();
