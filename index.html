@@ -89,6 +89,7 @@ a{color:var(--orange)}
 .period-bar{display:flex;gap:4px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:5px}
 .period-btn{padding:8px 18px;border-radius:8px;border:none;background:transparent;color:var(--text2);font-size:13px;font-weight:600;cursor:pointer;transition:all .2s}
 .period-btn:hover{color:var(--text);background:var(--card2)}
+#page-ai.is-loading>:not(.filter-row){opacity:.4;transition:opacity .15s}
 .period-btn.active{background:var(--orange);color:#fff}
 .promo-filter select{padding:8px 14px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:13px;outline:none;cursor:pointer}
 .promo-filter select:focus{border-color:var(--orange)}
@@ -527,6 +528,8 @@ let currentPeriod='30';
 let activeTab='overview';
 let dashData=null;
 let lastLoadedAt=0;
+// Every load gets a number; only the newest one may draw (period clicks and the 5-minute refresh overlap).
+let loadSeq=0;
 let mapDrawn=false;
 const AUTO_REFRESH_MS=5*60*1000;
 
@@ -592,6 +595,7 @@ function switchTab(name){
 
 // ── LOAD ALL ──
 async function loadAll({silent=false}={}){
+  const seq=++loadSeq;
   if(!silent){
     document.getElementById('loading').style.display='flex';
     document.getElementById('dash-content').style.display='none';
@@ -607,14 +611,20 @@ async function loadAll({silent=false}={}){
     const res=await fetch(url,{headers:{'Authorization':'Bearer '+session.access_token,'apikey':SB_KEY}});
     if(res.status===403)throw new Error('Tento účet nemá prístup do panela.');
     if(!res.ok)throw new Error('HTTP '+res.status);
-    dashData=await res.json();
+    const data=await res.json();
+    // A newer request is already on its way, so this answer is stale and must not overwrite it.
+    if(seq!==loadSeq)return;
+    dashData=data;
     lastLoadedAt=Date.now();
     document.getElementById('loading').style.display='none';
     document.getElementById('dash-content').style.display='block';
     if(!silent)mapDrawn=false;
     renderAll();
+    document.getElementById('page-ai').classList.remove('is-loading');
   }catch(e){
     console.error(e);
+    if(seq!==loadSeq)return;
+    document.getElementById('page-ai').classList.remove('is-loading');
     if(silent&&dashData){
       document.getElementById('last-updated').textContent='Obnova zlyhala: '+e.message;
       return;
@@ -638,6 +648,7 @@ document.getElementById('period-bar').addEventListener('click',e=>{
   document.querySelectorAll('.period-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
   currentPeriod=btn.dataset.days;
+  document.getElementById('page-ai').classList.add('is-loading');
   loadAll({silent:true});
 });
 
