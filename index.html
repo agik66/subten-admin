@@ -367,6 +367,10 @@ details.archive .table-card{margin-top:8px}
       <div id="store-notice"></div>
       <div class="kpi-row" id="kpi-store-row"></div>
 
+      <div class="section-title">Google Play</div>
+      <div id="play-notice"></div>
+      <div class="kpi-row" id="kpi-play-row"></div>
+
       <div class="section-title">Predplatné</div>
       <div class="table-card"><table id="tbl-subs"><thead><tr><th>Používateľ</th><th>Predplatné</th><th>Dátum</th><th>Krajina</th><th>Registrácia</th></tr></thead><tbody></tbody></table></div>
 
@@ -727,12 +731,27 @@ const CC=['#f97316','#3b82f6','#22c55e','#a855f7','#ef4444','#eab308','#06b6d4',
 const axis=(extra={})=>({ticks:{color:'#9393a0',font:{size:11},...extra},grid:{color:'#1e1e2e'}});
 
 // ══════════════════════════════════════════
+// Čísla z reportov Google Play. Google ich dáva po mesiacoch a s oneskorením niekoľkých dní,
+// preto sa "posledný deň" berie z dát, nie z kalendára. Celá aplikácia má v stĺpci krajiny prázdno.
+const playRows=()=>dashData?.play?.rows||[];
+const playSync=()=>dashData?.play?.sync||{};
+const playSum=(metric,fromDay='')=>playRows().filter(r=>r.metric===metric&&!r.country&&r.report_date>=fromDay).reduce((s,r)=>s+Number(r.value||0),0);
+const playUntil=()=>playRows().filter(r=>r.metric==='active_devices'&&!r.country).map(r=>r.report_date).sort().pop()||null;
+const playOn=(metric,day)=>playRows().filter(r=>r.metric===metric&&!r.country&&r.report_date===day).reduce((s,r)=>s+Number(r.value||0),0);
+function playMoney(metric,fromDay=''){
+  const by={};
+  playRows().filter(r=>r.metric===metric&&r.report_date>=fromDay).forEach(r=>{by[r.currency]=(by[r.currency]||0)+Number(r.value||0)});
+  const parts=Object.entries(by).map(([c,v])=>c==='EUR'?fE(v):`${Number(v).toLocaleString('sk-SK',{minimumFractionDigits:2,maximumFractionDigits:2})} ${esc(c)}`);
+  return parts.length?parts.join(' + '):fE(0);
+}
+
 // ALERTS
 // ══════════════════════════════════════════
 function renderAlerts(){
   const d=dashData,alerts=[],daily=d.daily||[];
   const sync=d.ads?.sync;
   if(sync?.error)alerts.push({t:'crit',msg:`⚠️ Apple Ads sa nepodarilo načítať: ${esc(sync.error)}`});
+  if(playSync().error)alerts.push({t:'crit',msg:`⚠️ Google Play sa nepodarilo načítať: ${esc(playSync().error)}`});
   if(storeSync().error)alerts.push({t:'crit',msg:`⚠️ App Store sa nepodarilo načítať: ${esc(storeSync().error)}`});
   // Kampane pred koncom
   adCampaigns().forEach(c=>{
@@ -791,6 +810,7 @@ function renderOverviewPage(){
   renderPlan();
   renderOverviewCharts(users);
   renderStore();
+  renderPlay();
   renderSubscribers(users);
   renderCountries(users);
   renderFeedback(d.feedback||[]);
@@ -837,6 +857,27 @@ function renderStore(){
     (a?`<div class="kpi ${a.trouble?'red':'yellow'}"><div class="kpi-label">Problém s platbou</div><div class="kpi-value">${fmt(a.trouble)}</div><div class="kpi-sub">stav k ${fDay(a.day)}</div></div>`:'');
 }
 
+function renderPlay(){
+  const sync=playSync(),box=document.getElementById('play-notice'),row=document.getElementById('kpi-play-row');
+  const until=playUntil();
+  if(sync.error)box.innerHTML=`<div class="notice err"><strong>Google Play sa nepodarilo načítať.</strong> Zobrazené sú posledné uložené čísla. ${esc(sync.error)}</div>`;
+  else if(sync.live)box.innerHTML=`<div class="notice"><strong>Čísla priamo od Google${until?`, naposledy za ${fDay(until)}`:'.'}</strong> Google ich zverejňuje po mesiacoch a s oneskorením niekoľkých dní, takže posledné dni chýbajú. Predaje sa objavia samé, keď ich Google začne písať.</div>`;
+  else if(sync.reason==='no_access')box.innerHTML=`<div class="notice warn"><strong>Google Play sa neobnovuje${until?`, čísla sú za ${fDay(until)}`:''}.</strong> Účet, ktorý má server k dispozícii, nesmie sťahovať hromadné zostavy z Play Console.</div>`;
+  else box.innerHTML='<div class="notice warn"><strong>Google Play zatiaľ nie je napojený.</strong> Server čaká na kľúč servisného účtu. Inštalácie a platiaci z účtov vidno inde v paneli.</div>';
+  if(!playRows().length){row.innerHTML='';return}
+  const since=new Date(Date.now()-30*864e5).toLocaleDateString('sv');
+  const day=until?` · ${fDay(until)}: `:'';
+  const kpi=(cls,label,metric,note='')=>`<div class="kpi ${cls}"><div class="kpi-label">${label}</div><div class="kpi-value">${fmt(playSum(metric))}</div><div class="kpi-sub">za 30 dní ${fmt(playSum(metric,since))}${until?` · ${fDay(until)}: ${fmt(playOn(metric,until))}`:''}${note}</div></div>`;
+  const sales=playRows().some(r=>r.metric==='sale');
+  row.innerHTML=
+    kpi('blue','Stiahnutia','user_installs')+
+    kpi('orange','Odinštalovania','user_uninstalls')+
+    (until?`<div class="kpi cyan"><div class="kpi-label">Aktívne zariadenia</div><div class="kpi-value">${fmt(playOn('active_devices',until))}</div><div class="kpi-sub">stav k ${fDay(until)}</div></div>`:'')+
+    (playRows().some(r=>r.metric==='listing_visitors')?`<div class="kpi purple"><div class="kpi-label">Návštevy stránky obchodu</div><div class="kpi-value">${fmt(playSum('listing_visitors'))}</div><div class="kpi-sub">za 30 dní ${fmt(playSum('listing_visitors',since))} · získaní ${fmt(playSum('listing_acquisitions'))}</div></div>`:'')+
+    (sales?kpi('green','Predaje Google Play','sale',` · hrubé ${playMoney('gross')}`):'')+
+    (playRows().some(r=>r.metric==='refund')?kpi('red','Vrátené platby','refund',` · ${playMoney('refund_gross')}`):'');
+}
+
 function renderOverviewCharts(users){
   const days=[];
   for(let i=29;i>=0;i--)days.push(new Date(Date.now()-i*864e5).toLocaleDateString('sv'));
@@ -851,6 +892,10 @@ function renderOverviewCharts(users){
   const downloadBy={};
   storeRows().filter(x=>x.metric==='download').forEach(x=>{downloadBy[x.report_date]=(downloadBy[x.report_date]||0)+Number(x.value||0)});
   if(Object.keys(downloadBy).length)datasets.push({label:'Stiahnutia (App Store)',type:'line',data:days.map(k=>downloadBy[k]??null),borderColor:'#3b82f6',backgroundColor:'#3b82f6',pointRadius:2,borderWidth:2,tension:.3,yAxisID:'y',order:1});
+  const playBy={};
+  playRows().filter(x=>x.metric==='user_installs'&&!x.country).forEach(x=>{playBy[x.report_date]=Number(x.value||0)});
+  // Dni, ktoré Google ešte nezverejnil, ostanú prázdne, aby graf nepredstieral nuly.
+  if(Object.keys(playBy).length)datasets.push({label:'Stiahnutia (Google Play)',type:'line',data:days.map(k=>playBy[k]??null),borderColor:'#14b8a6',backgroundColor:'#14b8a6',pointRadius:2,borderWidth:2,tension:.3,yAxisID:'y',order:1});
   destroyChart('new-daily');
   charts['new-daily']=new Chart(document.getElementById('chart-new-daily'),{type:'bar',data:{labels,datasets},options:{responsive:true,plugins:{legend:{display:datasets.length>1,labels:{color:'#9393a0',font:{size:11}}}},scales:{x:axis({maxTicksLimit:10}),y:axis({stepSize:1,precision:0}),...(hasSpend?{y1:{position:'right',grid:{display:false},ticks:{color:'#9393a0',font:{size:11},callback:v=>v+' €'}}}:{})}}});
 
