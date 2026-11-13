@@ -838,7 +838,7 @@ function renderStore(){
   const sync=storeSync(),box=document.getElementById('store-notice'),row=document.getElementById('kpi-store-row');
   const until=sync.until?.SALES;
   if(sync.error)box.innerHTML=`<div class="notice err"><strong>App Store sa nepodarilo načítať.</strong> Zobrazené sú posledné uložené čísla. ${esc(sync.error)}</div>`;
-  else if(sync.live)box.innerHTML=`<div class="notice"><strong>Čísla priamo od Apple${until?`, naposledy za ${fDay(until)}`:'.'}</strong> Deň pribudne nasledujúci deň okolo 17:00. Apple ráta dni podľa tichomorského času, takže sa od našich môžu líšiť o pár hodín.</div>`;
+  else if(sync.live)box.innerHTML=`<div class="notice"><strong>Čísla priamo od Apple${until?`, naposledy za ${fDay(until)}`:'.'}</strong> Stiahnutia a predaje za deň pribudnú nasledujúci deň okolo 15:00, stav predplatného okolo 18:00. Apple ráta dni podľa tichomorského času, takže sa od našich môžu líšiť o pár hodín.</div>`;
   else box.innerHTML='<div class="notice warn"><strong>App Store zatiaľ nie je napojený.</strong> Platiaci sú odhad z dátumov, príjem odhad z cenníka.</div>';
   if(!storeRows().length){row.innerHTML='';return}
   const since=new Date(Date.now()-30*864e5).toLocaleDateString('sv');
