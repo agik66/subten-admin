@@ -862,7 +862,7 @@ function renderPlay(){
   const until=playUntil();
   if(sync.error)box.innerHTML=`<div class="notice err"><strong>Google Play sa nepodarilo načítať.</strong> Zobrazené sú posledné uložené čísla. ${esc(sync.error)}</div>`;
   else if(sync.live)box.innerHTML=`<div class="notice"><strong>Čísla priamo od Google${until?`, naposledy za ${fDay(until)}`:'.'}</strong> Google ich zverejňuje po mesiacoch a s oneskorením niekoľkých dní, takže posledné dni chýbajú. Predaje sa objavia samé, keď ich Google začne písať.</div>`;
-  else if(sync.reason==='no_access')box.innerHTML=`<div class="notice warn"><strong>Google Play sa neobnovuje${until?`, čísla sú za ${fDay(until)}`:''}.</strong> Účet, ktorý má server k dispozícii, nesmie sťahovať hromadné zostavy z Play Console.</div>`;
+  else if(sync.reason==='no_access')box.innerHTML=`<div class="notice warn"><strong>Google Play sa neobnovuje${until?`, čísla sú za ${fDay(until)}`:'.'}</strong> Účet, ktorý má server k dispozícii, nesmie sťahovať hromadné zostavy z Play Console.</div>`;
   else box.innerHTML='<div class="notice warn"><strong>Google Play zatiaľ nie je napojený.</strong> Server čaká na kľúč servisného účtu. Inštalácie a platiaci z účtov vidno inde v paneli.</div>';
   if(!playRows().length){row.innerHTML='';return}
   const since=new Date(Date.now()-30*864e5).toLocaleDateString('sv');
